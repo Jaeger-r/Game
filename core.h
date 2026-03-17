@@ -88,6 +88,7 @@ public:
     void dealData(quint64 clientId, QByteArray data);
 public:
     void Test_Request(quint64 clientId,STRU_TEST_RQ* rq);
+    void KcpNegotiate_Request(quint64 clientId, STRU_KCP_NEGOTIATE_RQ* rq);
 
     void Sendmessage_Request(quint64 clientId,STRU_CHAT_RQ* rq);
 
@@ -124,6 +125,7 @@ public:
     }
 signals:
     void sendToClient(quint64 clientId, QByteArray data);
+    void sendToClientKcp(quint64 clientId, QByteArray data);
 private:
     QTimer *dazuoTimer;
     TCPNet *m_pTCPNet;

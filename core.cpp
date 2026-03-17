@@ -1,7 +1,8 @@
 #include "core.h"
 #include <QDateTime>
-#include <QDebug>
 #include <QTextStream>
+#include <QDebug>
+#include "QtKcp/src/qkcpsocket.h"
 
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
@@ -100,6 +101,9 @@ void core::dealData(quint64 clientId, QByteArray data)
     case _default_protocol_test_rq:
         Test_Request(clientId,(STRU_TEST_RQ*)body);
         break;
+    case _default_protocol_kcp_negotiate_rq:
+        KcpNegotiate_Request(clientId, (STRU_KCP_NEGOTIATE_RQ*)body);
+        break;
     case _default_protocol_login_rq:
         Login_Request(clientId,(STRU_LOGIN_RQ*)body);
         break;
@@ -152,6 +156,29 @@ void core::Test_Request(quint64 clientId, STRU_TEST_RQ* rq)
 
     QByteArray packet = PacketBuilder::build(_default_protocol_test_rs,test_rs);
     emit sendToClient(clientId, packet);
+}
+
+void core::KcpNegotiate_Request(quint64 clientId, STRU_KCP_NEGOTIATE_RQ* rq)
+{
+    Q_UNUSED(rq);
+    qDebug() << "KCP Negotiate Request from ClientID:" << clientId;
+
+    STRU_KCP_NEGOTIATE_RS rs;
+    rs.result = 0; // 默认失败
+    rs.kcpConv = 0;
+    rs.kcpPort = 0;
+    rs.kcpMode = (quint8)QKcpSocket::Mode::Fast;
+
+    QTcpSocket* tcpSocket = m_pTCPNet->getSocket(clientId);
+    if (m_pKcpNet->handleKcpNegotiate(clientId, tcpSocket, rs.kcpConv, rs.kcpPort)) {
+        rs.result = 1; // 成功
+        qDebug() << "KCP Negotiate SUCCESS for ClientID:" << clientId << "Conv:" << rs.kcpConv << "Port:" << rs.kcpPort;
+    } else {
+        qDebug() << "KCP Negotiate FAILED for ClientID:" << clientId;
+    }
+
+    QByteArray sendDataArray = PacketBuilder::build(_default_protocol_kcp_negotiate_rs, rs);
+    emit sendToClient(clientId, sendDataArray); // 通过TCP回包
 }
 
 void core::Sendmessage_Request(quint64 clientId, STRU_CHAT_RQ* rq){
@@ -544,7 +571,12 @@ void core::Location_Request(quint64 clientId, STRU_LOCATION_RQ* rq)
     QByteArray packet_loc = PacketBuilder::build(_default_protocol_location_rs, sls);
     for (quint64 cid : allClients) {
         if (cid != clientId) {
-            emit sendToClient(cid, packet_loc);
+            // 如果KCP已建立，优先使用KCP广播位置
+            if (m_pKcpNet && m_pKcpNet->isKcpConnected(cid)) {
+                emit sendToClientKcp(cid, packet_loc);
+            } else {
+                emit sendToClient(cid, packet_loc);
+            }
         }
     }
 }
@@ -736,7 +768,11 @@ void core::HandleAttack(quint64 clientId, STRU_ATTACK_RQ* rq) {
     QByteArray packet = PacketBuilder::build(_default_protocol_attack_rs, rs);
     const auto& allClients = m_pTCPNet->getAllClientIds();
     for (quint64 cid : allClients) {
-        emit sendToClient(cid, packet);
+        if (m_pKcpNet && m_pKcpNet->isKcpConnected(cid)) {
+            emit sendToClientKcp(cid, packet);
+        } else {
+            emit sendToClient(cid, packet);
+        }
     }
 
     // 如果死亡，10秒后复活

@@ -9,6 +9,8 @@
 #include <QTcpSocket>
 #include <QRandomGenerator>
 #include "packdef.h"
+#include "core.h"
+#include "ikcp.h"
 
 ///安全随机唯一KCP会话号
 class KcpConvManager {
@@ -55,7 +57,28 @@ bool KcpNet::initNetWork(const QString& szip, quint16 port)
 
     qDebug() << "KCP Network Layer Initialized on port:" << port << "(Connection managed by TCP)";
 
+    // 逻辑层 → 网络层（KCP回包）
+    if (core::getKernel())
+    {
+        connect((core*)(core::getKernel()),
+                &core::sendToClientKcp,
+                this, &KcpNet::sendData,
+                Qt::QueuedConnection);
+    }
+
+    // 监听新KCP连接（由客户端主动连接）
+    connect(kcpserver, &QKcpServer::newConnection, this, &KcpNet::onNewConnection);
+
     return true;
+}
+
+bool KcpNet::isKcpConnected(quint64 clientId) const
+{
+    auto it = idToKcpSocket.find(clientId);
+    if (it != idToKcpSocket.end()) {
+        return it.value() && it.value()->isConnected();
+    }
+    return false;
 }
 
 void KcpNet::unInitNetWork()
@@ -87,34 +110,69 @@ bool KcpNet::handleKcpNegotiate(quint64 clientId, QTcpSocket* tcpSocket, quint32
         return false;
     }
 
-    // 如果已存在，先清理
-    if (idToKcpSocket.contains(clientId)) {
-        removeKcpSocket(clientId);
-    }
-
-    // 从TCP socket获取客户端地址
-    QHostAddress peerAddress = tcpSocket->peerAddress();
-    // 客户端KCP端口：使用固定端口或从TCP协商获得（这里使用固定端口KCP_PORT_REALTIME_MOVE）
-    quint16 peerPort = KCP_PORT_REALTIME_MOVE;
-
     // 分配KCP会话ID
     kcpConv = KcpConvManager::allocConv();
+    
+    // 记录conv与clientId的对应关系，等待UDP包到来时匹配
+    convToClientId[kcpConv] = clientId;
 
-    // 创建KCP socket（使用Fast模式以获得最低延迟）
-    if (!createKcpSocket(clientId, peerAddress, peerPort, kcpConv)) {
-        KcpConvManager::releaseConv(kcpConv);
-        return false;
-    }
-
-    // 服务器KCP端口（使用KCP_PORT_REALTIME_MOVE）
+    // 服务器KCP端口（客户端应该连接这个端口）
     kcpPort = KCP_PORT_REALTIME_MOVE;
 
     qDebug() << "KCP Negotiate Success for Client:" << clientId
              << "Conv:" << kcpConv
-             << "Client Address:" << peerAddress << ":" << peerPort
-             << "Server Port:" << kcpPort;
+             << "Waiting for UDP connection on Server Port:" << kcpPort;
 
     return true;
+}
+
+void KcpNet::onNewConnection()
+{
+    while (kcpserver->hasPendingConnections()) {
+        QKcpSocket* kcpSocket = kcpserver->nextPendingConnection();
+        if (!kcpSocket) continue;
+
+        // 通过 handle 获取 conv ID
+        quint32 conv = 0;
+        if (kcpSocket->kcpHandle()) {
+            conv = ((ikcpcb*)kcpSocket->kcpHandle())->conv;
+        }
+        qDebug() << "New KCP Connection observed, conv:" << conv;
+
+        if (convToClientId.contains(conv)) {
+            quint64 clientId = convToClientId[conv];
+            
+            // 如果已存在旧的连接，先移除
+            if (idToKcpSocket.contains(clientId)) {
+                removeKcpSocket(clientId);
+            }
+
+            // 建立映射关系
+            idToKcpSocket[clientId] = kcpSocket;
+            
+            KcpClientInfo info;
+            info.conv = conv;
+            info.address = kcpSocket->peerAddress();
+            info.port = kcpSocket->peerPort();
+            info.socket = kcpSocket;
+            kcpClientInfo[clientId] = info;
+
+            addressToClientId[qMakePair(info.address, info.port)] = clientId;
+
+            // 连接信号
+            connect(kcpSocket, &QKcpSocket::readyRead, this, &KcpNet::onKcpSocketReadyRead);
+            connect(kcpSocket, &QKcpSocket::disconnected, this, [this, clientId]() {
+                qDebug() << "KCP Socket Disconnected for Client:" << clientId;
+                removeKcpSocket(clientId);
+            });
+
+            qDebug() << "KCP Connection Established for Client:" << clientId << "Conv:" << conv;
+        } else {
+            qDebug() << "Unknown KCP conv received:" << conv << ", closing.";
+            kcpSocket->disconnectFromHost();
+            kcpSocket->deleteLater();
+        }
+    }
 }
 
 bool KcpNet::createKcpSocket(quint64 clientId, const QHostAddress& peerAddress, quint16 peerPort, quint32 kcpConv)
@@ -192,7 +250,9 @@ void KcpNet::removeKcpSocket(quint64 clientId)
     // 从KCP客户端信息中获取conv并释放
     auto infoIt = kcpClientInfo.find(clientId);
     if (infoIt != kcpClientInfo.end()) {
-        KcpConvManager::releaseConv(infoIt.value().conv);
+        quint32 conv = infoIt.value().conv;
+        KcpConvManager::releaseConv(conv);
+        convToClientId.remove(conv); // 移除conv映射
         // 从地址映射中移除
         addressToClientId.remove(qMakePair(infoIt.value().address, infoIt.value().port));
         kcpClientInfo.erase(infoIt);

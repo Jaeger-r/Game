@@ -43,6 +43,7 @@ template <> constexpr inline auto KcpNet::qt_create_metaobjectdata<qt_meta_tag_Z
         "",
         "clientId",
         "data",
+        "onNewConnection",
         "onKcpSocketReadyRead"
     };
 
@@ -51,8 +52,10 @@ template <> constexpr inline auto KcpNet::qt_create_metaobjectdata<qt_meta_tag_Z
         QtMocHelpers::SignalData<void(quint64, const QByteArray &)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::ULongLong, 3 }, { QMetaType::QByteArray, 4 },
         }}),
-        // Slot 'onKcpSocketReadyRead'
+        // Slot 'onNewConnection'
         QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onKcpSocketReadyRead'
+        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -77,7 +80,8 @@ void KcpNet::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->kcpDataReceived((*reinterpret_cast< std::add_pointer_t<quint64>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QByteArray>>(_a[2]))); break;
-        case 1: _t->onKcpSocketReadyRead(); break;
+        case 1: _t->onNewConnection(); break;
+        case 2: _t->onKcpSocketReadyRead(); break;
         default: ;
         }
     }
@@ -106,14 +110,14 @@ int KcpNet::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 3;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 3)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 2;
+        _id -= 3;
     }
     return _id;
 }

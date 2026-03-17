@@ -22,7 +22,7 @@ public:
 
     // 实现INet接口（但实际不使用，连接由TCP管理）
     bool initNetWork(const QString& szip = SERVER_IP_LOCATION, quint16 sport = KCP_PORT_REALTIME_MOVE) override;
-    void unInitNetWork();
+    void unInitNetWork() override;
 
     /**
      * @brief 处理KCP协商请求，创建KCP连接
@@ -78,6 +78,8 @@ public:
      * @return 是否发送成功
      */
     bool sendData(quint64 clientId, const QByteArray& data);
+    bool isKcpConnected(quint64 clientId) const;
+    QTcpSocket* getSocket()  { return nullptr; } // KCP不使用TCP Socket数据
 
     /**
      * @brief 处理从UDP接收到的KCP数据
@@ -96,6 +98,7 @@ signals:
     void kcpDataReceived(quint64 clientId, const QByteArray& data);
 
 private slots:
+    void onNewConnection();
     void onKcpSocketReadyRead();
 
 private:
@@ -106,6 +109,9 @@ private:
 
     // KCP socket到客户端ID的映射（用于UDP数据包路由）
     QHash<QPair<QHostAddress, quint16>, quint64> addressToClientId;
+
+    // conv会话ID到客户端ID的映射（用于多路复用识别）
+    QHash<quint32, quint64> convToClientId;
 
     // 客户端ID到KCP会话信息的映射（管理conv、address、port）
     struct KcpClientInfo {

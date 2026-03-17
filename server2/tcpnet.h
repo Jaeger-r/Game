@@ -52,6 +52,13 @@ public:
     {
         return clientIds;
     }
+
+    QTcpSocket* getSocket(quint64 clientId) {
+        if (idToClientInfo.contains(clientId)) {
+            return idToClientInfo[clientId].socket;
+        }
+        return nullptr;
+    }
 private slots:
     void onNewConnection();
     void onReadyRead();
