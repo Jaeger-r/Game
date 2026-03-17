@@ -419,10 +419,13 @@ void core::InitializeBag_Request(quint64 clientId, STRU_INITBAG_RQ* rq)
 
     CMySql sql;
     STRU_INITBAG_RS initbag_rs;
+    memset(&initbag_rs, 0, sizeof(initbag_rs));
     char szsql[MAXSIZE] = {0};
 
     std::vector<std::vector<std::string>> result;
     std::list<std::string> liststr;
+
+    qDebug() << "InitBag: querying for player" << rq->playerId;
 
     // 查询玩家物品
     sprintf(szsql,

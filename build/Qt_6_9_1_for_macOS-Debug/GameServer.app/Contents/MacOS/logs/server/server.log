@@ -12974,3 +12974,89 @@
     [ ../../server2/tcpnet.cpp : 193 ] "10:41:45:204" checkHeartbeat ()
 [2026-03-17 10:42:35.203] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
     [ ../../server2/tcpnet.cpp : 193 ] "10:42:35:203" checkHeartbeat ()
+[2026-03-17 10:48:54.545] [DEBUG] [../../core.cpp:15] core::core(QObject *)()
+    [ ../../core.cpp : 15 ] "10:48:54:543" core ()
+[2026-03-17 10:48:54.548] [DEBUG] [../../server2/tcpnet.cpp:54] virtual bool TCPNet::initNetWork(const QString &, quint16)()
+    TCPServer Listening on: "127.0.0.1" 1234
+[2026-03-17 10:48:54.551] [DEBUG] [../../server2/kcpnet.cpp:56] virtual bool KcpNet::initNetWork(const QString &, quint16)()
+    KCP Network Layer Initialized on port: 1235 (Connection managed by TCP)
+[2026-03-17 10:48:54.551] [DEBUG] [../../main.cpp:82] int main(int, char **)()
+    Server is running
+[2026-03-17 10:49:01.298] [DEBUG] [../../server2/tcpnet.cpp:111] void TCPNet::onNewConnection()()
+    TCP Client Connected: 1
+[2026-03-17 10:49:01.928] [DEBUG] [../../server2/kcpnet.cpp:183] bool KcpNet::createKcpSocket(quint64, const QHostAddress &, quint16, quint32)()
+    KCP Socket Created for Client: 1 Conv: 2125698823 Peer: QHostAddress("127.0.0.1") : 1235
+[2026-03-17 10:49:01.928] [DEBUG] [../../server2/kcpnet.cpp:112] bool KcpNet::handleKcpNegotiate(quint64, QTcpSocket *, quint32 &, quint16 &)()
+    KCP Negotiate Success for Client: 1 Conv: 2125698823 Client Address: QHostAddress("127.0.0.1") : 1235 Server Port: 1235
+[2026-03-17 10:49:01.931] [DEBUG] [../../server2/tcpnet.cpp:160] void TCPNet::onReadyRead()()
+    KCP Negotiate Success for Client: 1 Conv: 2125698823 Port: 1235
+[2026-03-17 10:49:08.089] [DEBUG] [../../core.cpp:341] void core::Initialize_Request(quint64, STRU_INITIALIZE_RQ *)()
+    [ ../../core.cpp : 341 ] "10:49:08:089" Initialize_Request ()
+[2026-03-17 10:49:08.092] [DEBUG] [../../core.cpp:404] void core::Initialize_Request(quint64, STRU_INITIALIZE_RQ *)()
+    Init Success
+[2026-03-17 10:49:09.253] [DEBUG] [../../core.cpp:418] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    [ ../../core.cpp : 418 ] "10:49:09:252" InitializeBag_Request ()
+[2026-03-17 10:49:09.253] [DEBUG] [../../core.cpp:428] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    InitBag: querying for player 8
+[2026-03-17 10:49:09.256] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    1 : 1
+[2026-03-17 10:49:09.257] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    7 : 1
+[2026-03-17 10:49:09.257] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    8 : 1
+[2026-03-17 10:49:09.257] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    9 : 1
+[2026-03-17 10:49:09.257] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    10 : 1
+[2026-03-17 10:49:09.257] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    11 : 1
+[2026-03-17 10:49:09.258] [DEBUG] [../../core.cpp:503] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    Result: 1203
+[2026-03-17 10:49:38.831] [DEBUG] [../../server2/tcpnet.cpp:250] void TCPNet::onClientDisconnected()()
+    TCP Client Disconnected: 1
+[2026-03-17 10:49:38.832] [DEBUG] [../../server2/kcpnet.cpp:210] void KcpNet::removeKcpSocket(quint64)()
+    KCP Socket Removed for Client: 1
+[2026-03-17 10:49:44.189] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
+    [ ../../server2/tcpnet.cpp : 193 ] "10:49:44:189" checkHeartbeat ()
+[2026-03-17 10:50:34.187] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
+    [ ../../server2/tcpnet.cpp : 193 ] "10:50:34:186" checkHeartbeat ()
+[2026-03-17 10:51:24.186] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
+    [ ../../server2/tcpnet.cpp : 193 ] "10:51:24:185" checkHeartbeat ()
+[2026-03-17 10:52:14.185] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
+    [ ../../server2/tcpnet.cpp : 193 ] "10:52:14:183" checkHeartbeat ()
+[2026-03-17 10:52:39.524] [DEBUG] [../../server2/tcpnet.cpp:111] void TCPNet::onNewConnection()()
+    TCP Client Connected: 1
+[2026-03-17 10:52:40.026] [DEBUG] [../../server2/kcpnet.cpp:183] bool KcpNet::createKcpSocket(quint64, const QHostAddress &, quint16, quint32)()
+    KCP Socket Created for Client: 1 Conv: 1483106125 Peer: QHostAddress("127.0.0.1") : 1235
+[2026-03-17 10:52:40.027] [DEBUG] [../../server2/kcpnet.cpp:112] bool KcpNet::handleKcpNegotiate(quint64, QTcpSocket *, quint32 &, quint16 &)()
+    KCP Negotiate Success for Client: 1 Conv: 1483106125 Client Address: QHostAddress("127.0.0.1") : 1235 Server Port: 1235
+[2026-03-17 10:52:40.027] [DEBUG] [../../server2/tcpnet.cpp:160] void TCPNet::onReadyRead()()
+    KCP Negotiate Success for Client: 1 Conv: 1483106125 Port: 1235
+[2026-03-17 10:52:48.583] [DEBUG] [../../core.cpp:341] void core::Initialize_Request(quint64, STRU_INITIALIZE_RQ *)()
+    [ ../../core.cpp : 341 ] "10:52:48:583" Initialize_Request ()
+[2026-03-17 10:52:48.584] [DEBUG] [../../core.cpp:404] void core::Initialize_Request(quint64, STRU_INITIALIZE_RQ *)()
+    Init Success
+[2026-03-17 10:52:50.751] [DEBUG] [../../core.cpp:418] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    [ ../../core.cpp : 418 ] "10:52:50:751" InitializeBag_Request ()
+[2026-03-17 10:52:50.752] [DEBUG] [../../core.cpp:428] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    InitBag: querying for player 8
+[2026-03-17 10:52:50.753] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    1 : 1
+[2026-03-17 10:52:50.753] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    7 : 1
+[2026-03-17 10:52:50.753] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    8 : 1
+[2026-03-17 10:52:50.753] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    9 : 1
+[2026-03-17 10:52:50.753] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    10 : 1
+[2026-03-17 10:52:50.754] [DEBUG] [../../core.cpp:499] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    11 : 1
+[2026-03-17 10:52:50.754] [DEBUG] [../../core.cpp:503] void core::InitializeBag_Request(quint64, STRU_INITBAG_RQ *)()
+    Result: 1203
+[2026-03-17 10:53:04.181] [DEBUG] [../../server2/tcpnet.cpp:193] void TCPNet::checkHeartbeat()()
+    [ ../../server2/tcpnet.cpp : 193 ] "10:53:04:181" checkHeartbeat ()
+[2026-03-17 10:53:27.317] [DEBUG] [../../server2/tcpnet.cpp:250] void TCPNet::onClientDisconnected()()
+    TCP Client Disconnected: 1
+[2026-03-17 10:53:27.319] [DEBUG] [../../server2/kcpnet.cpp:210] void KcpNet::removeKcpSocket(quint64)()
+    KCP Socket Removed for Client: 1
