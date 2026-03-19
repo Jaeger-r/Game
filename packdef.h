@@ -45,7 +45,9 @@
 //#define UDPSERVER
 #define MAXSIZE 1024
 #define NAMESIZE 50
+#define MAPID_SIZE 64
 #define MAX_BAG_ITEM_NUM 48
+#define MAX_EQUIPMENT_SLOT_NUM 7
 
 #define _sql_error_        0001
 
@@ -191,6 +193,8 @@ struct STRU_INITIALIZE_RS
     float critical_damage;        //暴击伤害
     float x;                      //玩家坐标X
     float y;                      //玩家坐标Y
+    char mapId[MAPID_SIZE];       //当前地图ID
+    int questStep;                //任务阶段
     int Initialize_Result;       //初始化结果
     int player_UserId;
 };
@@ -233,10 +237,19 @@ struct STRU_SAVE_RQ
     int defence;                  //防御力
     float critical_rate;          //暴击率
     float critical_damage;        //暴击伤害
+    float x;                      //玩家坐标X
+    float y;                      //玩家坐标Y
+    char mapId[MAPID_SIZE];       //当前地图ID
+    int questStep;                //任务阶段
+    int equippedItemIds[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnhanceLevels[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedForgeLevels[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnchantKinds[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnchantValues[MAX_EQUIPMENT_SLOT_NUM];
 };
 struct STRU_SAVE_RS
 {
-    char Save_Result;
+    int Save_Result;
 };
 
 
@@ -313,6 +326,11 @@ struct STRU_INITBAG_RS
     int itemAmount;
     int Result;
     int playerBag[MAX_BAG_ITEM_NUM][2];
+    int equippedItemIds[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnhanceLevels[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedForgeLevels[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnchantKinds[MAX_EQUIPMENT_SLOT_NUM];
+    int equippedEnchantValues[MAX_EQUIPMENT_SLOT_NUM];
 };
 
 
@@ -329,4 +347,3 @@ struct STRU_PLAYERLIST_RS
 
 };
 #endif // PACKDEF_H
-

@@ -60,6 +60,15 @@ bool core::open() {
     // ---------------- DB ----------------
     out << "-> Database: ";
     dbOk = CheckDB();
+    if (dbOk) {
+        dbOk = ensureEquipmentColumns();
+    }
+    if (dbOk) {
+        dbOk = ensureEquipmentStateTable();
+    }
+    if (dbOk) {
+        dbOk = ensureProgressStateTable();
+    }
     out << (dbOk ? GREEN "OK" RESET : RED "FAILED" RESET) << "\n";
 
     // ---------------- File ----------------
@@ -77,6 +86,86 @@ bool core::open() {
         out << RED "One or more modules failed to initialize!" RESET << "\n";
         return false;
     }
+}
+
+bool core::ensureEquipmentColumns()
+{
+    CMySql sql;
+    const std::vector<std::pair<const char*, const char*>> columns = {
+        {"u_equipment_weapon", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_head", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_body", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_legs", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_hands", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_shoes", "INT NOT NULL DEFAULT 0"},
+        {"u_equipment_shield", "INT NOT NULL DEFAULT 0"}
+    };
+
+    char szsql[MAXSIZE * 2] = {0};
+    for (const auto& column : columns) {
+        std::list<std::string> result;
+        snprintf(szsql,
+                 sizeof(szsql),
+                 "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                 "WHERE TABLE_SCHEMA = DATABASE() "
+                 "AND TABLE_NAME = 'user_basic_information' "
+                 "AND COLUMN_NAME = '%s';",
+                 column.first);
+
+        if (!sql.SelectMySql(szsql, 1, result)) {
+            return false;
+        }
+
+        const bool exists = !result.empty() && result.front() != "0";
+        if (exists) {
+            continue;
+        }
+
+        snprintf(szsql,
+                 sizeof(szsql),
+                 "ALTER TABLE user_basic_information "
+                 "ADD COLUMN %s %s;",
+                 column.first,
+                 column.second);
+
+        if (!sql.UpdateMySql(szsql)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool core::ensureEquipmentStateTable()
+{
+    CMySql sql;
+    const char* createSql =
+        "CREATE TABLE IF NOT EXISTS user_equipment_state ("
+        "u_id INT NOT NULL, "
+        "slot_index INT NOT NULL, "
+        "item_id INT NOT NULL DEFAULT 0, "
+        "enhance_level INT NOT NULL DEFAULT 0, "
+        "forge_level INT NOT NULL DEFAULT 0, "
+        "enchant_kind INT NOT NULL DEFAULT 0, "
+        "enchant_value INT NOT NULL DEFAULT 0, "
+        "PRIMARY KEY (u_id, slot_index)"
+        ");";
+    return sql.UpdateMySql(createSql);
+}
+
+bool core::ensureProgressStateTable()
+{
+    CMySql sql;
+    const char* createSql =
+        "CREATE TABLE IF NOT EXISTS user_progress_state ("
+        "u_id INT NOT NULL PRIMARY KEY, "
+        "map_id VARCHAR(64) NOT NULL DEFAULT 'BornWorld', "
+        "quest_step INT NOT NULL DEFAULT 0, "
+        "pos_x FLOAT NOT NULL DEFAULT 100, "
+        "pos_y FLOAT NOT NULL DEFAULT 100, "
+        "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        ");";
+    return sql.UpdateMySql(createSql);
 }
 
 void core::close(){
@@ -367,83 +456,109 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
 {
     JaegerDebug();
 
+    ensureProgressStateTable();
     CMySql sql;
-    STRU_INITIALIZE_RS initialize_rs;
+    STRU_INITIALIZE_RS initialize_rs{};
     initialize_rs.Initialize_Result = _initialize_fail;
+    snprintf(initialize_rs.mapId, sizeof(initialize_rs.mapId), "%s", "BornWorld");
+    initialize_rs.questStep = 0;
 
-    char szsql[MAXSIZE] = {0};
-    list<string>liststr;
-    sprintf(szsql,"select u_name,u_health,u_attackpower,u_attackrange,u_experience,u_level,u_defence,u_critrate,u_critdamage,u_position_x,u_position_y from user_basic_information where u_id = '%d';",rq->player_UserId);
-    if (sql.SelectMySql(szsql,11,liststr))
+    auto parseInt = [](const std::string& value, int fallback) -> int {
+        try {
+            return std::stoi(value);
+        } catch (...) {
+            return fallback;
+        }
+    };
+    auto parseLongLong = [](const std::string& value, long long fallback) -> long long {
+        try {
+            return std::stoll(value);
+        } catch (...) {
+            return fallback;
+        }
+    };
+    auto parseFloat = [](const std::string& value, float fallback) -> float {
+        try {
+            return std::stof(value);
+        } catch (...) {
+            return fallback;
+        }
+    };
+
+    char szsql[MAXSIZE * 3] = {0};
+    list<string> liststr;
+    snprintf(szsql,
+             sizeof(szsql),
+             "SELECT "
+             "b.u_name, b.u_health, b.u_attackpower, b.u_attackrange, b.u_experience, b.u_level, "
+             "b.u_defence, b.u_critrate, b.u_critdamage, b.u_position_x, b.u_position_y, "
+             "COALESCE(p.map_id, 'BornWorld'), COALESCE(p.quest_step, 0), "
+             "COALESCE(p.pos_x, b.u_position_x), COALESCE(p.pos_y, b.u_position_y) "
+             "FROM user_basic_information b "
+             "LEFT JOIN user_progress_state p ON p.u_id = b.u_id "
+             "WHERE b.u_id = '%d' LIMIT 1;",
+             rq->player_UserId);
+
+    if (!sql.SelectMySql(szsql, 15, liststr) || liststr.size() < 15) {
         initialize_rs.Initialize_Result = _initialize_error;
-    if (!liststr.empty()) {
-        //1
-        string strUserName = liststr.front();
-        snprintf(initialize_rs.player_Name,
-                 sizeof(initialize_rs.player_Name),
-                 "%s",
-                 strUserName.c_str());
-        liststr.pop_front();
-        //2
-        string strUserHealth = liststr.front();
-        initialize_rs.health = std::stoi(strUserHealth);
-        liststr.pop_front();
-        //3
-        string strUserAttackPower = liststr.front();
-        initialize_rs.attackPower = std::stof(strUserAttackPower);
-        liststr.pop_front();
-        //4
-        string strUserAttackRange = liststr.front();
-        initialize_rs.attackRange = std::stof(strUserAttackRange);
-        liststr.pop_front();
-        //5
-        string strUserExperience = liststr.front();
-        initialize_rs.experience = std::stoll(strUserExperience);
-        liststr.pop_front();
-        //6
-        string strUserLevel = liststr.front();
-        initialize_rs.level = std::stoi(strUserLevel);
-        liststr.pop_front();
-        //7
-        string strUserDefence = liststr.front();
-        initialize_rs.defence = std::stoi(strUserDefence);
-        liststr.pop_front();
-        //8
-        string strUserCritRate = liststr.front();
-        initialize_rs.critical_rate = std::stof(strUserCritRate);
-        liststr.pop_front();
-        //9
-        string strUserCritDamage = liststr.front();
-        initialize_rs.critical_damage = std::stof(strUserCritDamage);
-        liststr.pop_front();
-        //10
-        string strUserPositionX = liststr.front();
-        initialize_rs.x = std::stof(strUserPositionX);
-        liststr.pop_front();
-        //11
-        string strUserPositionY = liststr.front();
-        initialize_rs.y = std::stof(strUserPositionY);
-        liststr.pop_front();
-        //12
-        initialize_rs.Initialize_Result = _initialize_success;
-        //13
-        initialize_rs.player_UserId = rq->player_UserId;
-        qDebug()<<"Init Success";
-        QByteArray packet = PacketBuilder::build(_default_protocol_initialize_rs,initialize_rs);
+        QByteArray packet = PacketBuilder::build(_default_protocol_initialize_rs, initialize_rs);
         emit sendToClient(clientId, packet);
-        //m_pTCPNet->sendData(sock,(char*)&initialize_rs,sizeof(initialize_rs));
-    }else{
-        initialize_rs.Initialize_Result = _initialize_error;
-        QByteArray packet = PacketBuilder::build(_default_protocol_initialize_rs,initialize_rs);
-        emit sendToClient(clientId, packet);
-        //m_pTCPNet->sendData(sock,(char*)&initialize_rs,sizeof(initialize_rs));
+        return;
     }
+
+    string strUserName = liststr.front();
+    snprintf(initialize_rs.player_Name, sizeof(initialize_rs.player_Name), "%s", strUserName.c_str());
+    liststr.pop_front();
+
+    initialize_rs.health = parseInt(liststr.front(), 100);
+    liststr.pop_front();
+    initialize_rs.attackPower = parseInt(liststr.front(), 10);
+    liststr.pop_front();
+    initialize_rs.attackRange = parseInt(liststr.front(), 30);
+    liststr.pop_front();
+    initialize_rs.experience = parseLongLong(liststr.front(), 0);
+    liststr.pop_front();
+    initialize_rs.level = parseInt(liststr.front(), 1);
+    liststr.pop_front();
+    initialize_rs.defence = parseInt(liststr.front(), 5);
+    liststr.pop_front();
+    initialize_rs.critical_rate = parseFloat(liststr.front(), 0.05f);
+    liststr.pop_front();
+    initialize_rs.critical_damage = parseFloat(liststr.front(), 1.5f);
+    liststr.pop_front();
+    initialize_rs.x = parseFloat(liststr.front(), 100.0f);
+    liststr.pop_front();
+    initialize_rs.y = parseFloat(liststr.front(), 100.0f);
+    liststr.pop_front();
+
+    string strMapId = liststr.front();
+    liststr.pop_front();
+    if (strMapId.empty()) {
+        strMapId = "BornWorld";
+    }
+    snprintf(initialize_rs.mapId, sizeof(initialize_rs.mapId), "%s", strMapId.c_str());
+
+    initialize_rs.questStep = parseInt(liststr.front(), 0);
+    liststr.pop_front();
+
+    initialize_rs.x = parseFloat(liststr.front(), initialize_rs.x);
+    liststr.pop_front();
+    initialize_rs.y = parseFloat(liststr.front(), initialize_rs.y);
+    liststr.pop_front();
+
+    initialize_rs.Initialize_Result = _initialize_success;
+    initialize_rs.player_UserId = rq->player_UserId;
+    qDebug() << "Init Success";
+    QByteArray packet = PacketBuilder::build(_default_protocol_initialize_rs, initialize_rs);
+    emit sendToClient(clientId, packet);
 }
 
 void core::InitializeBag_Request(quint64 clientId, STRU_INITBAG_RQ* rq)
 {
     JaegerDebug();
 
+    ensureEquipmentColumns();
+    ensureEquipmentStateTable();
     CMySql sql;
     STRU_INITBAG_RS initbag_rs;
     memset(&initbag_rs, 0, sizeof(initbag_rs));
@@ -474,6 +589,75 @@ void core::InitializeBag_Request(quint64 clientId, STRU_INITBAG_RQ* rq)
         size_t end = s.find_last_not_of(" \t\n\r");
         return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
     };
+
+    std::list<std::string> equipmentList;
+    sprintf(szsql,
+            "select "
+            "u_equipment_weapon,"
+            "u_equipment_head,"
+            "u_equipment_body,"
+            "u_equipment_legs,"
+            "u_equipment_hands,"
+            "u_equipment_shoes,"
+            "u_equipment_shield "
+            "from user_basic_information where u_id = %d",
+            rq->playerId);
+
+    if (sql.SelectMySql(szsql, MAX_EQUIPMENT_SLOT_NUM, equipmentList)) {
+        for (int i = 0; i < MAX_EQUIPMENT_SLOT_NUM && !equipmentList.empty(); ++i) {
+            try {
+                initbag_rs.equippedItemIds[i] = std::stoi(trim(equipmentList.front()));
+            } catch (...) {
+                initbag_rs.equippedItemIds[i] = 0;
+            }
+            equipmentList.pop_front();
+        }
+    }
+
+    std::list<std::string> equipmentStateRows;
+    sprintf(szsql,
+            "select slot_index,item_id,enhance_level,forge_level,enchant_kind,enchant_value "
+            "from user_equipment_state where u_id = %d order by slot_index asc",
+            rq->playerId);
+
+    if (sql.SelectMySql(szsql, 6, equipmentStateRows)) {
+        while (equipmentStateRows.size() >= 6) {
+            int slotIndex = 0;
+            try {
+                slotIndex = std::stoi(trim(equipmentStateRows.front()));
+            } catch (...) {
+                slotIndex = -1;
+            }
+            equipmentStateRows.pop_front();
+
+            auto readValue = [&equipmentStateRows, &trim]() -> int {
+                int value = 0;
+                try {
+                    value = std::stoi(trim(equipmentStateRows.front()));
+                } catch (...) {
+                    value = 0;
+                }
+                equipmentStateRows.pop_front();
+                return value;
+            };
+
+            const int itemId = readValue();
+            const int enhanceLevel = readValue();
+            const int forgeLevel = readValue();
+            const int enchantKind = readValue();
+            const int enchantValue = readValue();
+
+            if (slotIndex < 0 || slotIndex >= MAX_EQUIPMENT_SLOT_NUM) {
+                continue;
+            }
+
+            initbag_rs.equippedItemIds[slotIndex] = itemId;
+            initbag_rs.equippedEnhanceLevels[slotIndex] = enhanceLevel;
+            initbag_rs.equippedForgeLevels[slotIndex] = forgeLevel;
+            initbag_rs.equippedEnchantKinds[slotIndex] = enchantKind;
+            initbag_rs.equippedEnchantValues[slotIndex] = enchantValue;
+        }
+    }
 
     // list -> vector，保证每行有两列
     auto it = liststr.begin();
@@ -587,11 +771,13 @@ void core::PlayerList_Request(quint64 clientId, STRU_PLAYERLIST_RQ* rq){
 void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
     JaegerDebug();
 
+    ensureEquipmentColumns();
+    ensureEquipmentStateTable();
+    ensureProgressStateTable();
     STRU_SAVE_RS sss;
     CMySql sql;
     sss.Save_Result = _save_fail_;
     char szsql[MAXSIZE] = {0};
-    list<string>liststr;
     sprintf(szsql,
             "UPDATE user_basic_information SET "
             "u_health = '%d', "
@@ -601,12 +787,82 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
             "u_level = '%d', "
             "u_defence = '%d', "
             "u_critrate = '%.2f', "
-            "u_critdamage = '%.2f' "
+            "u_critdamage = '%.2f', "
+            "u_position_x = '%.2f', "
+            "u_position_y = '%.2f', "
+            "u_equipment_weapon = '%d', "
+            "u_equipment_head = '%d', "
+            "u_equipment_body = '%d', "
+            "u_equipment_legs = '%d', "
+            "u_equipment_hands = '%d', "
+            "u_equipment_shoes = '%d', "
+            "u_equipment_shield = '%d' "
             "WHERE u_id = '%d';",
             rq->health, rq->attackPower, rq->attackRange, rq->experience,
-            rq->level, rq->defence, rq->critical_rate, rq->critical_damage, rq->player_UserId
+            rq->level, rq->defence, rq->critical_rate, rq->critical_damage,
+            rq->x, rq->y,
+            rq->equippedItemIds[0], rq->equippedItemIds[1], rq->equippedItemIds[2],
+            rq->equippedItemIds[3], rq->equippedItemIds[4], rq->equippedItemIds[5],
+            rq->equippedItemIds[6],
+            rq->player_UserId
             );
-    if(sql.UpdateMySql(szsql)){
+    bool savedOk = sql.UpdateMySql(szsql);
+
+    if (savedOk) {
+        for (int slotIndex = 0; slotIndex < MAX_EQUIPMENT_SLOT_NUM; ++slotIndex) {
+            sprintf(szsql,
+                    "INSERT INTO user_equipment_state "
+                    "(u_id, slot_index, item_id, enhance_level, forge_level, enchant_kind, enchant_value) "
+                    "VALUES ('%d', '%d', '%d', '%d', '%d', '%d', '%d') "
+                    "ON DUPLICATE KEY UPDATE "
+                    "item_id = VALUES(item_id), "
+                    "enhance_level = VALUES(enhance_level), "
+                    "forge_level = VALUES(forge_level), "
+                    "enchant_kind = VALUES(enchant_kind), "
+                    "enchant_value = VALUES(enchant_value);",
+                    rq->player_UserId,
+                    slotIndex,
+                    rq->equippedItemIds[slotIndex],
+                    rq->equippedEnhanceLevels[slotIndex],
+                    rq->equippedForgeLevels[slotIndex],
+                    rq->equippedEnchantKinds[slotIndex],
+                    rq->equippedEnchantValues[slotIndex]);
+            if (!sql.UpdateMySql(szsql)) {
+                savedOk = false;
+                break;
+            }
+        }
+    }
+
+    if (savedOk) {
+        QString mapId = QString::fromUtf8(rq->mapId).trimmed();
+        if (mapId.isEmpty()) {
+            mapId = QStringLiteral("BornWorld");
+        }
+        mapId.replace('\'', "''");
+        const QByteArray safeMapUtf8 = mapId.toUtf8();
+
+        sprintf(szsql,
+                "INSERT INTO user_progress_state "
+                "(u_id, map_id, quest_step, pos_x, pos_y) "
+                "VALUES ('%d', '%s', '%d', '%.2f', '%.2f') "
+                "ON DUPLICATE KEY UPDATE "
+                "map_id = VALUES(map_id), "
+                "quest_step = VALUES(quest_step), "
+                "pos_x = VALUES(pos_x), "
+                "pos_y = VALUES(pos_y);",
+                rq->player_UserId,
+                safeMapUtf8.constData(),
+                rq->questStep,
+                rq->x,
+                rq->y);
+
+        if (!sql.UpdateMySql(szsql)) {
+            savedOk = false;
+        }
+    }
+
+    if(savedOk){
         sss.Save_Result = _save_success_;
     }else{
         sss.Save_Result = _save_error_;

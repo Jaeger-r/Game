@@ -116,6 +116,9 @@ public:
     //PlayerAttributes getPlayerAttributesFromDB(int userId);
     bool updateHealthInDB(int userId, int newHealth);
     bool updatePlayerInDB(int userId, const Player_Information &attr);
+    bool ensureEquipmentColumns();
+    bool ensureEquipmentStateTable();
+    bool ensureProgressStateTable();
 public:
     bool LevelUp(int& lvl,long long& userExp,int player_id);
 public:
