@@ -241,6 +241,8 @@ struct STRU_SAVE_RQ
     float y;                      //玩家坐标Y
     char mapId[MAPID_SIZE];       //当前地图ID
     int questStep;                //任务阶段
+    int bagItemAmount;            //背包条目数
+    int bagItems[MAX_BAG_ITEM_NUM][2]; // [itemId, count]
     int equippedItemIds[MAX_EQUIPMENT_SLOT_NUM];
     int equippedEnhanceLevels[MAX_EQUIPMENT_SLOT_NUM];
     int equippedForgeLevels[MAX_EQUIPMENT_SLOT_NUM];

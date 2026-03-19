@@ -13,6 +13,7 @@
 #include <ctime>
 #include <algorithm>
 #include "packdef.h"
+#include "combatbalance.h"
 #include <QTimer>
 #include <math.h>
 #include "packetbuilder.h"
@@ -143,18 +144,18 @@ private:
     std::unordered_map<int, std::shared_ptr<Player_Information>> m_mapPlayerInfo;
 private:
     long long getEXP(int level){
-        return 100 * level + 50 * pow(level - 1, 3);
+        return CombatBalance::playerStats(level).expToNext;
     }
     double getHP(int level) {
-        return 100 + 80 * level + 10 * pow(level - 1, 2);
+        return CombatBalance::playerStats(level).maxHealth;
     }
 
     double getATK(int level) {
-        return 10 + 6 * level + 0.5 * pow(level - 1, 2);
+        return CombatBalance::playerStats(level).attack;
     }
 
     double getDEF(int level) {
-        return 5 + 5 * level + 0.8 * pow(level - 1, 1.5);
+        return CombatBalance::playerStats(level).defence;
     }
 };
 

@@ -309,6 +309,8 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
     CMySql mysql;
     char sql[MAXSIZE]{0};
     list<string> result;
+    const int baseLevel = 1;
+    const CombatBalance::PlayerStats baseStats = CombatBalance::playerStats(baseLevel);
 
     //查手机号
     sprintf(sql,
@@ -353,13 +355,58 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
         return REG_SELECT_USERNAME_FAIL;
     int user_id = std::stoi(result.front());
     sprintf(sql,
-            "insert into user_basic_information(u_id,u_name) values (%d,'%s');",
+            "insert into user_basic_information("
+            "u_id,u_name,u_health,u_attackpower,u_attackrange,u_experience,u_level,"
+            "u_defence,u_critrate,u_critdamage,u_position_x,u_position_y) "
+            "values (%d,'%s','%d','%d','%d','%d','%d','%d','%.3f','%.3f','%.1f','%.1f');",
             user_id,
-            rq->player_Name
+            rq->player_Name,
+            baseStats.maxHealth,
+            baseStats.attack,
+            30,
+            0,
+            baseLevel,
+            baseStats.defence,
+            baseStats.critRate,
+            baseStats.critDamage,
+            100.0f,
+            100.0f
             );
     if (!mysql.UpdateMySql(sql))
         return REG_INSERT_FAIL;
     result.clear();
+
+    const std::vector<std::pair<int, int>> starterItems = {
+        {1, 1},      // 初行者长剑
+        {7, 1},      // 初行者护盾
+        {10, 1},     // 初行者胸甲
+        {12, 1},     // 初行者头盔
+        {13, 1},     // 初行者护腿
+        {14, 1},     // 初行者护手
+        {15, 1},     // 初行者战靴
+        {8, 20},     // 红苹果
+        {11, 8},     // 大红药水
+        {1001, 45000}, // 金币
+        {1002, 140}, // 强化石
+        {1003, 90},  // 锻造锤
+        {1004, 80},  // 魔力结晶
+        {1005, 360}, // 无色晶块
+        {1006, 130}  // 炉岩碳
+    };
+
+    for (const auto& item : starterItems) {
+        snprintf(sql,
+                 sizeof(sql),
+                 "INSERT INTO user_item (u_id, item_id, item_count) "
+                 "VALUES ('%d', '%d', '%d') "
+                 "ON DUPLICATE KEY UPDATE item_count = item_count + VALUES(item_count);",
+                 user_id,
+                 item.first,
+                 item.second);
+        if (!mysql.UpdateMySql(sql)) {
+            return REG_INSERT_FAIL;
+        }
+    }
     return REG_OK;
 }
 void core::Register_Request(quint64 clientId, STRU_REGISTER_RQ* rq)
@@ -520,7 +567,7 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
     liststr.pop_front();
     initialize_rs.level = parseInt(liststr.front(), 1);
     liststr.pop_front();
-    initialize_rs.defence = parseInt(liststr.front(), 5);
+    initialize_rs.defence = parseInt(liststr.front(), 12);
     liststr.pop_front();
     initialize_rs.critical_rate = parseFloat(liststr.front(), 0.05f);
     liststr.pop_front();
@@ -545,6 +592,35 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
     liststr.pop_front();
     initialize_rs.y = parseFloat(liststr.front(), initialize_rs.y);
     liststr.pop_front();
+
+    // 统一按等级基准重建角色核心战斗属性，避免历史旧档造成数值漂移
+    const CombatBalance::PlayerStats expected = CombatBalance::playerStats(initialize_rs.level);
+    initialize_rs.attackPower = expected.attack;
+    initialize_rs.defence = expected.defence;
+    initialize_rs.critical_rate = expected.critRate;
+    initialize_rs.critical_damage = expected.critDamage;
+    initialize_rs.attackRange = qMax(20, initialize_rs.attackRange);
+    initialize_rs.health = qBound(1, initialize_rs.health, expected.maxHealth);
+
+    // 将标准化后的属性同步回数据库（权威端）
+    snprintf(szsql,
+             sizeof(szsql),
+             "UPDATE user_basic_information SET "
+             "u_health = '%d', "
+             "u_attackpower = '%d', "
+             "u_attackrange = '%d', "
+             "u_defence = '%d', "
+             "u_critrate = '%.3f', "
+             "u_critdamage = '%.3f' "
+             "WHERE u_id = '%d';",
+             initialize_rs.health,
+             initialize_rs.attackPower,
+             initialize_rs.attackRange,
+             initialize_rs.defence,
+             initialize_rs.critical_rate,
+             initialize_rs.critical_damage,
+             rq->player_UserId);
+    sql.UpdateMySql(szsql);
 
     initialize_rs.Initialize_Result = _initialize_success;
     initialize_rs.player_UserId = rq->player_UserId;
@@ -778,6 +854,10 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
     CMySql sql;
     sss.Save_Result = _save_fail_;
     char szsql[MAXSIZE] = {0};
+    const int normalizedLevel = CombatBalance::clampLevel(rq->level);
+    const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(normalizedLevel);
+    const int normalizedHealth = qBound(1, rq->health, baseline.maxHealth);
+    const int normalizedAttackRange = qBound(20, rq->attackRange, 120);
     sprintf(szsql,
             "UPDATE user_basic_information SET "
             "u_health = '%d', "
@@ -798,8 +878,8 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
             "u_equipment_shoes = '%d', "
             "u_equipment_shield = '%d' "
             "WHERE u_id = '%d';",
-            rq->health, rq->attackPower, rq->attackRange, rq->experience,
-            rq->level, rq->defence, rq->critical_rate, rq->critical_damage,
+            normalizedHealth, baseline.attack, normalizedAttackRange, rq->experience,
+            normalizedLevel, baseline.defence, baseline.critRate, baseline.critDamage,
             rq->x, rq->y,
             rq->equippedItemIds[0], rq->equippedItemIds[1], rq->equippedItemIds[2],
             rq->equippedItemIds[3], rq->equippedItemIds[4], rq->equippedItemIds[5],
@@ -827,6 +907,37 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
                     rq->equippedForgeLevels[slotIndex],
                     rq->equippedEnchantKinds[slotIndex],
                     rq->equippedEnchantValues[slotIndex]);
+            if (!sql.UpdateMySql(szsql)) {
+                savedOk = false;
+                break;
+            }
+        }
+    }
+
+    if (savedOk) {
+        sprintf(szsql,
+                "DELETE FROM user_item WHERE u_id = '%d';",
+                rq->player_UserId);
+        if (!sql.UpdateMySql(szsql)) {
+            savedOk = false;
+        }
+    }
+
+    if (savedOk) {
+        const int safeBagAmount = qBound(0, rq->bagItemAmount, MAX_BAG_ITEM_NUM);
+        for (int i = 0; i < safeBagAmount; ++i) {
+            const int itemId = rq->bagItems[i][0];
+            const int itemCount = rq->bagItems[i][1];
+            if (itemId <= 0 || itemCount <= 0) {
+                continue;
+            }
+
+            sprintf(szsql,
+                    "INSERT INTO user_item (u_id, item_id, item_count) "
+                    "VALUES ('%d', '%d', '%d');",
+                    rq->player_UserId,
+                    itemId,
+                    itemCount);
             if (!sql.UpdateMySql(szsql)) {
                 savedOk = false;
                 break;
@@ -976,21 +1087,49 @@ bool core::LevelUp(int& lvl,long long& userExp,int player_id)
     JaegerDebug();
     CMySql sql;
     bool leveledUp = false;
-    while(userExp>=getEXP(lvl)){
-        userExp -= getEXP(lvl);
-        ++lvl;
+    int newLevel = CombatBalance::clampLevel(lvl);
+    long long remainedExp = qMax(0LL, userExp);
+
+    while(remainedExp >= getEXP(newLevel) && newLevel < 100){
+        remainedExp -= getEXP(newLevel);
+        ++newLevel;
         leveledUp = true;
     }
+
+    lvl = newLevel;
+    userExp = remainedExp;
+
     if(leveledUp){
+        const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(lvl);
         char szsql[MAXSIZE] = {0};
         sprintf(szsql,
                 "UPDATE user_basic_information SET "
+                "u_health = '%d', "
+                "u_attackpower = '%d', "
                 "u_experience = '%lld', "
-                "u_level = '%d' "
+                "u_level = '%d', "
+                "u_defence = '%d', "
+                "u_critrate = '%.3f', "
+                "u_critdamage = '%.3f' "
                 "WHERE u_id = '%d';",
-                0,lvl,player_id
+                baseline.maxHealth,
+                baseline.attack,
+                userExp,
+                lvl,
+                baseline.defence,
+                baseline.critRate,
+                baseline.critDamage,
+                player_id
                 );
-        m_mapPlayerInfo[player_id]->exp = 0;
+        if (m_mapPlayerInfo.count(player_id) && m_mapPlayerInfo[player_id]) {
+            m_mapPlayerInfo[player_id]->exp = userExp;
+            m_mapPlayerInfo[player_id]->level = lvl;
+            m_mapPlayerInfo[player_id]->health = baseline.maxHealth;
+            m_mapPlayerInfo[player_id]->attackPower = baseline.attack;
+            m_mapPlayerInfo[player_id]->defense = baseline.defence;
+            m_mapPlayerInfo[player_id]->critRate = baseline.critRate;
+            m_mapPlayerInfo[player_id]->critDamage = baseline.critDamage;
+        }
         return sql.UpdateMySql(szsql);
     }
     return false;
