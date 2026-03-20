@@ -3,26 +3,59 @@
 #include "kcpnet.h"
 #include <QRandomGenerator>
 #include <QSet>
+#include <QElapsedTimer>
 #include "qkcpsocket.h"
 #include <QTcpSocket>
+
+namespace {
+QString packetCommandLabel(quint16 cmd)
+{
+    switch (cmd) {
+    case _default_protocol_heartbeat_rq: return QStringLiteral("heartbeat_rq");
+    case _default_protocol_kcp_negotiate_rq: return QStringLiteral("kcp_negotiate_rq");
+    case _default_protocol_chat_rq: return QStringLiteral("chat_rq");
+    case _default_protocol_location_rq: return QStringLiteral("location_rq");
+    case _default_protocol_login_rq: return QStringLiteral("login_rq");
+    case _default_protocol_register_rq: return QStringLiteral("register_rq");
+    case _default_protocol_initialize_rq: return QStringLiteral("initialize_rq");
+    case _default_protocol_save_rq: return QStringLiteral("save_rq");
+    case _default_protocol_dazuo_rq: return QStringLiteral("dazuo_rq");
+    case _default_protocol_levelup_rq: return QStringLiteral("levelup_rq");
+    case _default_protocol_attack_rq: return QStringLiteral("attack_rq");
+    case _default_protocol_revive_rq: return QStringLiteral("revive_rq");
+    case _default_protocol_initbag_rq: return QStringLiteral("initbag_rq");
+    case _default_protocol_playerlist_rq: return QStringLiteral("playerlist_rq");
+    default: return QStringLiteral("cmd_%1").arg(cmd);
+    }
+}
+}
 
 
 ///逻辑线程池
 class LogicTask : public QRunnable
 {
 public:
-    LogicTask(quint64 cid, QByteArray d)
-        : clientId(cid), data(std::move(d)) {}
+    LogicTask(TCPNet* n, quint64 cid, QByteArray d, quint16 c)
+        : net(n), clientId(cid), data(std::move(d)), cmd(c) {}
 
     void run() override
     {
-        //qDebug() << "LogicTask running in thread:" << QThread::currentThread()<< "clientId:" << clientId;
+        if (net) {
+            net->notifyLogicTaskStarted();
+        }
+        QElapsedTimer timer;
+        timer.start();
         core::getKernel()->dealData(clientId, data);
+        if (net) {
+            net->notifyLogicTaskFinished(cmd, timer.nsecsElapsed());
+        }
     }
 
 private:
+    TCPNet* net;
     quint64 clientId;
     QByteArray data;
+    quint16 cmd;
 };
 
 TCPNet::TCPNet(QObject* parent)
@@ -39,6 +72,11 @@ TCPNet::TCPNet(QObject* parent)
     connect(heartbeatTimer, &QTimer::timeout,
             this, &TCPNet::checkHeartbeat);
     heartbeatTimer->start(50000); // 每 5 秒扫描
+
+    monitorTimer = new QTimer(this);
+    connect(monitorTimer, &QTimer::timeout,
+            this, &TCPNet::logRuntimeStats);
+    monitorTimer->start(5000);
 }
 
 
@@ -139,6 +177,7 @@ void TCPNet::onReadyRead()
 
         QByteArray packet = buffer.left(header.length);
         buffer.remove(0, header.length);
+        m_totalPacketCount.fetch_add(1, std::memory_order_relaxed);
 
         if (header.cmd == _default_protocol_kcp_negotiate_rq)
         {
@@ -181,7 +220,8 @@ void TCPNet::onReadyRead()
         else
         {
             // 投递到逻辑线程池
-            LogicTask* task = new LogicTask(clientId, packet);
+            m_logicQueuedCount.fetch_add(1, std::memory_order_relaxed);
+            LogicTask* task = new LogicTask(this, clientId, packet, header.cmd);
             task->setAutoDelete(true);
             QThreadPool::globalInstance()->start(task);
         }
@@ -267,4 +307,71 @@ void TCPNet::sendData(quint64 clientId, QByteArray data)
 
     QTcpSocket* socket = it.value().socket;
     if (socket->state() == QAbstractSocket::ConnectedState) socket->write(data);
+}
+
+void TCPNet::notifyLogicTaskStarted()
+{
+    m_logicQueuedCount.fetch_sub(1, std::memory_order_relaxed);
+    m_logicActiveCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+void TCPNet::notifyLogicTaskFinished(quint16 cmd, qint64 elapsedNs)
+{
+    m_logicActiveCount.fetch_sub(1, std::memory_order_relaxed);
+    m_logicPacketCount.fetch_add(1, std::memory_order_relaxed);
+    m_logicProcessingTotalNs.fetch_add(static_cast<quint64>(qMax<qint64>(0, elapsedNs)),
+                                       std::memory_order_relaxed);
+
+    quint64 currentMax = m_logicProcessingMaxNs.load(std::memory_order_relaxed);
+    const quint64 safeElapsed = static_cast<quint64>(qMax<qint64>(0, elapsedNs));
+    while (safeElapsed > currentMax
+           && !m_logicProcessingMaxNs.compare_exchange_weak(currentMax,
+                                                            safeElapsed,
+                                                            std::memory_order_relaxed)) {
+    }
+
+    if (safeElapsed >= 20'000'000ULL) {
+        qWarning() << "[Perf] Slow packet"
+                   << packetCommandLabel(cmd)
+                   << "elapsedMs=" << QString::number(static_cast<double>(safeElapsed) / 1000000.0, 'f', 2)
+                   << "queued=" << m_logicQueuedCount.load(std::memory_order_relaxed)
+                   << "active=" << m_logicActiveCount.load(std::memory_order_relaxed);
+    }
+}
+
+void TCPNet::logRuntimeStats()
+{
+    QThreadPool* pool = QThreadPool::globalInstance();
+    const int onlineConnections = idToClientInfo.size();
+    const int queued = qMax(0, m_logicQueuedCount.load(std::memory_order_relaxed));
+    const int active = qMax(0, m_logicActiveCount.load(std::memory_order_relaxed));
+    const quint64 totalPackets = m_totalPacketCount.load(std::memory_order_relaxed);
+    const quint64 logicPackets = m_logicPacketCount.load(std::memory_order_relaxed);
+    const quint64 totalNs = m_logicProcessingTotalNs.load(std::memory_order_relaxed);
+    const quint64 maxNs = m_logicProcessingMaxNs.load(std::memory_order_relaxed);
+    const quint64 packetDelta = totalPackets - m_lastLoggedPacketCount;
+    const quint64 logicDelta = logicPackets - m_lastLoggedLogicPacketCount;
+    m_lastLoggedPacketCount = totalPackets;
+    m_lastLoggedLogicPacketCount = logicPackets;
+
+    const double avgLogicMs = logicPackets > 0
+                                  ? static_cast<double>(totalNs) / static_cast<double>(logicPackets) / 1000000.0
+                                  : 0.0;
+    const double maxLogicMs = static_cast<double>(maxNs) / 1000000.0;
+
+    qInfo().noquote()
+        << QStringLiteral("[Monitor] online=%1 totalPackets=%2 (+%3/5s) logicPackets=%4 (+%5/5s) "
+                          "threadPool(active=%6 queued=%7 maxThreads=%8 qtActive=%9) "
+                          "logicAvgMs=%10 logicMaxMs=%11")
+              .arg(onlineConnections)
+              .arg(totalPackets)
+              .arg(packetDelta)
+              .arg(logicPackets)
+              .arg(logicDelta)
+              .arg(active)
+              .arg(queued)
+              .arg(pool ? pool->maxThreadCount() : 0)
+              .arg(pool ? pool->activeThreadCount() : 0)
+              .arg(QString::number(avgLogicMs, 'f', 2))
+              .arg(QString::number(maxLogicMs, 'f', 2));
 }

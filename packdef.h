@@ -184,13 +184,25 @@ struct STRU_INITIALIZE_RS
 {
     char player_Name[NAMESIZE];
     int health;                   //生命值
-    int attackPower;              //攻击力
+    int mana;                     //法力值
+    int attackPower;              //物理攻击力
+    int magicAttack;              //魔法攻击力
+    int independentAttack;        //独立攻击力
     int attackRange;              //攻击范围
     long long experience;         //经验
     int level;                    //等级
-    int defence;                  //防御力
-    float critical_rate;          //暴击率
+    int defence;                  //物理防御力
+    int magicDefence;             //魔法防御力
+    int strength;                 //力量
+    int intelligence;             //智力
+    int vitality;                 //体力
+    int spirit;                   //精神
+    float critical_rate;          //物理暴击率
+    float magic_critical_rate;    //魔法暴击率
     float critical_damage;        //暴击伤害
+    float attack_speed;           //攻击速度加成
+    float move_speed;             //移动速度加成
+    float cast_speed;             //施放速度加成
     float x;                      //玩家坐标X
     float y;                      //玩家坐标Y
     char mapId[MAPID_SIZE];       //当前地图ID
@@ -230,13 +242,25 @@ struct STRU_SAVE_RQ
 {
     int player_UserId;            //玩家ID
     int health;                   //生命值
-    int attackPower;              //攻击力
+    int mana;                     //法力值
+    int attackPower;              //物理攻击力
+    int magicAttack;              //魔法攻击力
+    int independentAttack;        //独立攻击力
     int attackRange;              //攻击范围
     long long experience;         //经验
     int level;                    //等级
-    int defence;                  //防御力
-    float critical_rate;          //暴击率
+    int defence;                  //物理防御力
+    int magicDefence;             //魔法防御力
+    int strength;                 //力量
+    int intelligence;             //智力
+    int vitality;                 //体力
+    int spirit;                   //精神
+    float critical_rate;          //物理暴击率
+    float magic_critical_rate;    //魔法暴击率
     float critical_damage;        //暴击伤害
+    float attack_speed;           //攻击速度加成
+    float move_speed;             //移动速度加成
+    float cast_speed;             //施放速度加成
     float x;                      //玩家坐标X
     float y;                      //玩家坐标Y
     char mapId[MAPID_SIZE];       //当前地图ID

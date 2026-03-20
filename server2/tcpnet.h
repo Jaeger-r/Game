@@ -10,6 +10,7 @@
 #include <QThreadPool>
 #include <QDebug>
 #include <string.h>
+#include <atomic>
 #include "INet.h"
 #include "core.h"
 #include <QVector>
@@ -38,6 +39,8 @@ public:
 
     void checkHeartbeat();
     void kickClient(quint64 clientId);
+    void notifyLogicTaskStarted();
+    void notifyLogicTaskFinished(quint16 cmd, qint64 elapsedNs);
 
     // 设置KcpNet指针（由kernel调用）
     void setKcpNet(KcpNet* kcpNet) { m_pKcpNet = kcpNet; }
@@ -64,6 +67,7 @@ private slots:
     void onReadyRead();
     void onClientDisconnected();
     void sendData(quint64 clientId, QByteArray data);
+    void logRuntimeStats();
 
 private:
 
@@ -84,6 +88,15 @@ private:
     QMap<quint64, QByteArray> recvBuffers;
 
     QTimer* heartbeatTimer;
+    QTimer* monitorTimer = nullptr;
+    std::atomic<int> m_logicQueuedCount{0};
+    std::atomic<int> m_logicActiveCount{0};
+    std::atomic<quint64> m_totalPacketCount{0};
+    std::atomic<quint64> m_logicPacketCount{0};
+    std::atomic<quint64> m_logicProcessingTotalNs{0};
+    std::atomic<quint64> m_logicProcessingMaxNs{0};
+    quint64 m_lastLoggedPacketCount = 0;
+    quint64 m_lastLoggedLogicPacketCount = 0;
 
 };
 

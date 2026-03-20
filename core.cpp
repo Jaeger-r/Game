@@ -61,6 +61,9 @@ bool core::open() {
     out << "-> Database: ";
     dbOk = CheckDB();
     if (dbOk) {
+        dbOk = ensurePlayerStatColumns();
+    }
+    if (dbOk) {
         dbOk = ensureEquipmentColumns();
     }
     if (dbOk) {
@@ -99,6 +102,59 @@ bool core::ensureEquipmentColumns()
         {"u_equipment_hands", "INT NOT NULL DEFAULT 0"},
         {"u_equipment_shoes", "INT NOT NULL DEFAULT 0"},
         {"u_equipment_shield", "INT NOT NULL DEFAULT 0"}
+    };
+
+    char szsql[MAXSIZE * 2] = {0};
+    for (const auto& column : columns) {
+        std::list<std::string> result;
+        snprintf(szsql,
+                 sizeof(szsql),
+                 "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                 "WHERE TABLE_SCHEMA = DATABASE() "
+                 "AND TABLE_NAME = 'user_basic_information' "
+                 "AND COLUMN_NAME = '%s';",
+                 column.first);
+
+        if (!sql.SelectMySql(szsql, 1, result)) {
+            return false;
+        }
+
+        const bool exists = !result.empty() && result.front() != "0";
+        if (exists) {
+            continue;
+        }
+
+        snprintf(szsql,
+                 sizeof(szsql),
+                 "ALTER TABLE user_basic_information "
+                 "ADD COLUMN %s %s;",
+                 column.first,
+                 column.second);
+
+        if (!sql.UpdateMySql(szsql)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool core::ensurePlayerStatColumns()
+{
+    CMySql sql;
+    const std::vector<std::pair<const char*, const char*>> columns = {
+        {"u_mana", "INT NOT NULL DEFAULT 0"},
+        {"u_magicattack", "INT NOT NULL DEFAULT 0"},
+        {"u_independentattack", "INT NOT NULL DEFAULT 0"},
+        {"u_magicdefence", "INT NOT NULL DEFAULT 0"},
+        {"u_strength", "INT NOT NULL DEFAULT 0"},
+        {"u_intelligence", "INT NOT NULL DEFAULT 0"},
+        {"u_vitality", "INT NOT NULL DEFAULT 0"},
+        {"u_spirit", "INT NOT NULL DEFAULT 0"},
+        {"u_magiccritrate", "FLOAT NOT NULL DEFAULT 0"},
+        {"u_attackspeed", "FLOAT NOT NULL DEFAULT 0"},
+        {"u_movespeed", "FLOAT NOT NULL DEFAULT 0"},
+        {"u_castspeed", "FLOAT NOT NULL DEFAULT 0"}
     };
 
     char szsql[MAXSIZE * 2] = {0};
@@ -356,19 +412,34 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
     int user_id = std::stoi(result.front());
     sprintf(sql,
             "insert into user_basic_information("
-            "u_id,u_name,u_health,u_attackpower,u_attackrange,u_experience,u_level,"
-            "u_defence,u_critrate,u_critdamage,u_position_x,u_position_y) "
-            "values (%d,'%s','%d','%d','%d','%d','%d','%d','%.3f','%.3f','%.1f','%.1f');",
+            "u_id,u_name,u_health,u_mana,u_attackpower,u_magicattack,u_independentattack,"
+            "u_attackrange,u_experience,u_level,u_defence,u_magicdefence,"
+            "u_strength,u_intelligence,u_vitality,u_spirit,"
+            "u_critrate,u_magiccritrate,u_critdamage,"
+            "u_attackspeed,u_movespeed,u_castspeed,u_position_x,u_position_y) "
+            "values (%d,'%s','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%.3f','%.3f','%.3f','%.3f','%.3f','%.3f','%.1f','%.1f');",
             user_id,
             rq->player_Name,
             baseStats.maxHealth,
+            baseStats.maxMana,
             baseStats.attack,
-            30,
+            baseStats.magicAttack,
+            baseStats.independentAttack,
+            baseStats.attackRange,
             0,
             baseLevel,
             baseStats.defence,
+            baseStats.magicDefence,
+            baseStats.strength,
+            baseStats.intelligence,
+            baseStats.vitality,
+            baseStats.spirit,
             baseStats.critRate,
+            baseStats.magicCritRate,
             baseStats.critDamage,
+            baseStats.attackSpeed,
+            baseStats.moveSpeed,
+            baseStats.castSpeed,
             100.0f,
             100.0f
             );
@@ -537,8 +608,14 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
     snprintf(szsql,
              sizeof(szsql),
              "SELECT "
-             "b.u_name, b.u_health, b.u_attackpower, b.u_attackrange, b.u_experience, b.u_level, "
-             "b.u_defence, b.u_critrate, b.u_critdamage, b.u_position_x, b.u_position_y, "
+             "b.u_name, b.u_health, b.u_mana, "
+             "b.u_attackpower, b.u_magicattack, b.u_independentattack, b.u_attackrange, "
+             "b.u_experience, b.u_level, "
+             "b.u_defence, b.u_magicdefence, "
+             "b.u_strength, b.u_intelligence, b.u_vitality, b.u_spirit, "
+             "b.u_critrate, b.u_magiccritrate, b.u_critdamage, "
+             "b.u_attackspeed, b.u_movespeed, b.u_castspeed, "
+             "b.u_position_x, b.u_position_y, "
              "COALESCE(p.map_id, 'BornWorld'), COALESCE(p.quest_step, 0), "
              "COALESCE(p.pos_x, b.u_position_x), COALESCE(p.pos_y, b.u_position_y) "
              "FROM user_basic_information b "
@@ -546,7 +623,7 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
              "WHERE b.u_id = '%d' LIMIT 1;",
              rq->player_UserId);
 
-    if (!sql.SelectMySql(szsql, 15, liststr) || liststr.size() < 15) {
+    if (!sql.SelectMySql(szsql, 27, liststr) || liststr.size() < 27) {
         initialize_rs.Initialize_Result = _initialize_error;
         QByteArray packet = PacketBuilder::build(_default_protocol_initialize_rs, initialize_rs);
         emit sendToClient(clientId, packet);
@@ -559,7 +636,13 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
 
     initialize_rs.health = parseInt(liststr.front(), 100);
     liststr.pop_front();
+    initialize_rs.mana = parseInt(liststr.front(), 60);
+    liststr.pop_front();
     initialize_rs.attackPower = parseInt(liststr.front(), 10);
+    liststr.pop_front();
+    initialize_rs.magicAttack = parseInt(liststr.front(), 10);
+    liststr.pop_front();
+    initialize_rs.independentAttack = parseInt(liststr.front(), 10);
     liststr.pop_front();
     initialize_rs.attackRange = parseInt(liststr.front(), 30);
     liststr.pop_front();
@@ -569,9 +652,27 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
     liststr.pop_front();
     initialize_rs.defence = parseInt(liststr.front(), 12);
     liststr.pop_front();
+    initialize_rs.magicDefence = parseInt(liststr.front(), 10);
+    liststr.pop_front();
+    initialize_rs.strength = parseInt(liststr.front(), 0);
+    liststr.pop_front();
+    initialize_rs.intelligence = parseInt(liststr.front(), 0);
+    liststr.pop_front();
+    initialize_rs.vitality = parseInt(liststr.front(), 0);
+    liststr.pop_front();
+    initialize_rs.spirit = parseInt(liststr.front(), 0);
+    liststr.pop_front();
     initialize_rs.critical_rate = parseFloat(liststr.front(), 0.05f);
     liststr.pop_front();
+    initialize_rs.magic_critical_rate = parseFloat(liststr.front(), 0.04f);
+    liststr.pop_front();
     initialize_rs.critical_damage = parseFloat(liststr.front(), 1.5f);
+    liststr.pop_front();
+    initialize_rs.attack_speed = parseFloat(liststr.front(), 0.0f);
+    liststr.pop_front();
+    initialize_rs.move_speed = parseFloat(liststr.front(), 0.0f);
+    liststr.pop_front();
+    initialize_rs.cast_speed = parseFloat(liststr.front(), 0.0f);
     liststr.pop_front();
     initialize_rs.x = parseFloat(liststr.front(), 100.0f);
     liststr.pop_front();
@@ -593,32 +694,71 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
     initialize_rs.y = parseFloat(liststr.front(), initialize_rs.y);
     liststr.pop_front();
 
+    initialize_rs.level = CombatBalance::clampLevel(initialize_rs.level);
+    initialize_rs.experience = qMax(0LL, initialize_rs.experience);
+
     // 统一按等级基准重建角色核心战斗属性，避免历史旧档造成数值漂移
     const CombatBalance::PlayerStats expected = CombatBalance::playerStats(initialize_rs.level);
     initialize_rs.attackPower = expected.attack;
+    initialize_rs.magicAttack = expected.magicAttack;
+    initialize_rs.independentAttack = expected.independentAttack;
     initialize_rs.defence = expected.defence;
+    initialize_rs.magicDefence = expected.magicDefence;
+    initialize_rs.strength = expected.strength;
+    initialize_rs.intelligence = expected.intelligence;
+    initialize_rs.vitality = expected.vitality;
+    initialize_rs.spirit = expected.spirit;
     initialize_rs.critical_rate = expected.critRate;
+    initialize_rs.magic_critical_rate = expected.magicCritRate;
     initialize_rs.critical_damage = expected.critDamage;
-    initialize_rs.attackRange = qMax(20, initialize_rs.attackRange);
+    initialize_rs.attack_speed = expected.attackSpeed;
+    initialize_rs.move_speed = expected.moveSpeed;
+    initialize_rs.cast_speed = expected.castSpeed;
+    initialize_rs.attackRange = qMax(20, expected.attackRange);
     initialize_rs.health = qBound(1, initialize_rs.health, expected.maxHealth);
+    initialize_rs.mana = qBound(0, initialize_rs.mana, expected.maxMana);
 
     // 将标准化后的属性同步回数据库（权威端）
     snprintf(szsql,
              sizeof(szsql),
              "UPDATE user_basic_information SET "
              "u_health = '%d', "
+             "u_mana = '%d', "
              "u_attackpower = '%d', "
+             "u_magicattack = '%d', "
+             "u_independentattack = '%d', "
              "u_attackrange = '%d', "
              "u_defence = '%d', "
+             "u_magicdefence = '%d', "
+             "u_strength = '%d', "
+             "u_intelligence = '%d', "
+             "u_vitality = '%d', "
+             "u_spirit = '%d', "
              "u_critrate = '%.3f', "
-             "u_critdamage = '%.3f' "
+             "u_magiccritrate = '%.3f', "
+             "u_critdamage = '%.3f', "
+             "u_attackspeed = '%.3f', "
+             "u_movespeed = '%.3f', "
+             "u_castspeed = '%.3f' "
              "WHERE u_id = '%d';",
              initialize_rs.health,
+             initialize_rs.mana,
              initialize_rs.attackPower,
+             initialize_rs.magicAttack,
+             initialize_rs.independentAttack,
              initialize_rs.attackRange,
              initialize_rs.defence,
+             initialize_rs.magicDefence,
+             initialize_rs.strength,
+             initialize_rs.intelligence,
+             initialize_rs.vitality,
+             initialize_rs.spirit,
              initialize_rs.critical_rate,
+             initialize_rs.magic_critical_rate,
              initialize_rs.critical_damage,
+             initialize_rs.attack_speed,
+             initialize_rs.move_speed,
+             initialize_rs.cast_speed,
              rq->player_UserId);
     sql.UpdateMySql(szsql);
 
@@ -810,9 +950,32 @@ void core::Location_Request(quint64 clientId, STRU_LOCATION_RQ* rq)
     }
     // 如果没有记录，则新插入
     if (!found) {
-        players.emplace_back(rq->player_UserId, QString::fromUtf8(rq->player_Name),
-                             1, 0, 0, 100, 10, 5, 0.0f, 1.0f, 0.0f,
-                             rq->x, rq->y);
+        const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(1);
+        players.emplace_back(rq->player_UserId,
+                             QString::fromUtf8(rq->player_Name),
+                             1,
+                             0,
+                             0,
+                             baseline.maxHealth,
+                             baseline.maxMana,
+                             baseline.attack,
+                             baseline.magicAttack,
+                             baseline.independentAttack,
+                             baseline.defence,
+                             baseline.magicDefence,
+                             baseline.strength,
+                             baseline.intelligence,
+                             baseline.vitality,
+                             baseline.spirit,
+                             baseline.critRate,
+                             baseline.magicCritRate,
+                             baseline.critDamage,
+                             baseline.attackSpeed,
+                             baseline.moveSpeed,
+                             baseline.castSpeed,
+                             baseline.attackRange,
+                             rq->x,
+                             rq->y);
     }
 
     // 构造位置同步数据包
@@ -853,21 +1016,36 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
     STRU_SAVE_RS sss;
     CMySql sql;
     sss.Save_Result = _save_fail_;
-    char szsql[MAXSIZE] = {0};
+    char szsql[MAXSIZE * 3] = {0};
     const int normalizedLevel = CombatBalance::clampLevel(rq->level);
     const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(normalizedLevel);
     const int normalizedHealth = qBound(1, rq->health, baseline.maxHealth);
-    const int normalizedAttackRange = qBound(20, rq->attackRange, 120);
-    sprintf(szsql,
+    const int normalizedMana = qBound(0, rq->mana, baseline.maxMana);
+    const int normalizedAttackRange = qBound(20, rq->attackRange, 160);
+    const long long normalizedExperience = qMax(0LL, rq->experience);
+    snprintf(szsql,
+            sizeof(szsql),
             "UPDATE user_basic_information SET "
             "u_health = '%d', "
+            "u_mana = '%d', "
             "u_attackpower = '%d', "
+            "u_magicattack = '%d', "
+            "u_independentattack = '%d', "
             "u_attackrange = '%d', "
             "u_experience = '%lld', "
             "u_level = '%d', "
             "u_defence = '%d', "
-            "u_critrate = '%.2f', "
-            "u_critdamage = '%.2f', "
+            "u_magicdefence = '%d', "
+            "u_strength = '%d', "
+            "u_intelligence = '%d', "
+            "u_vitality = '%d', "
+            "u_spirit = '%d', "
+            "u_critrate = '%.3f', "
+            "u_magiccritrate = '%.3f', "
+            "u_critdamage = '%.3f', "
+            "u_attackspeed = '%.3f', "
+            "u_movespeed = '%.3f', "
+            "u_castspeed = '%.3f', "
             "u_position_x = '%.2f', "
             "u_position_y = '%.2f', "
             "u_equipment_weapon = '%d', "
@@ -878,8 +1056,12 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
             "u_equipment_shoes = '%d', "
             "u_equipment_shield = '%d' "
             "WHERE u_id = '%d';",
-            normalizedHealth, baseline.attack, normalizedAttackRange, rq->experience,
-            normalizedLevel, baseline.defence, baseline.critRate, baseline.critDamage,
+            normalizedHealth, normalizedMana,
+            baseline.attack, baseline.magicAttack, baseline.independentAttack, normalizedAttackRange, normalizedExperience,
+            normalizedLevel, baseline.defence, baseline.magicDefence,
+            baseline.strength, baseline.intelligence, baseline.vitality, baseline.spirit,
+            baseline.critRate, baseline.magicCritRate, baseline.critDamage,
+            baseline.attackSpeed, baseline.moveSpeed, baseline.castSpeed,
             rq->x, rq->y,
             rq->equippedItemIds[0], rq->equippedItemIds[1], rq->equippedItemIds[2],
             rq->equippedItemIds[3], rq->equippedItemIds[4], rq->equippedItemIds[5],
@@ -1002,9 +1184,35 @@ void core::Dazuo_Request(quint64 clientId, STRU_DAZUO_RQ* rq)
             std::string userLevel = liststr.front(); liststr.pop_front();
             std::string userExp = liststr.front(); liststr.pop_front();
 
+            const int parsedLevel = CombatBalance::clampLevel(std::stoi(userLevel));
+            const long long parsedExp = qMax(0LL, std::stoll(userExp));
+            const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(parsedLevel);
             auto playerInfo = std::make_shared<Player_Information>(
-                tempid, "", std::stoi(userLevel), std::stoll(userExp), std::stoll(userExp),
-                0, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+                tempid,
+                "",
+                parsedLevel,
+                parsedExp,
+                parsedExp,
+                baseline.maxHealth,
+                baseline.maxMana,
+                baseline.attack,
+                baseline.magicAttack,
+                baseline.independentAttack,
+                baseline.defence,
+                baseline.magicDefence,
+                baseline.strength,
+                baseline.intelligence,
+                baseline.vitality,
+                baseline.spirit,
+                baseline.critRate,
+                baseline.magicCritRate,
+                baseline.critDamage,
+                baseline.attackSpeed,
+                baseline.moveSpeed,
+                baseline.castSpeed,
+                baseline.attackRange,
+                0.0f,
+                0.0f);
             m_mapPlayerInfo[tempid] = playerInfo;
 
             if (m_mapDazuoTimer.count(tempid) && m_mapDazuoTimer[tempid])
@@ -1101,34 +1309,74 @@ bool core::LevelUp(int& lvl,long long& userExp,int player_id)
 
     if(leveledUp){
         const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(lvl);
-        char szsql[MAXSIZE] = {0};
-        sprintf(szsql,
+        char szsql[MAXSIZE * 3] = {0};
+        snprintf(szsql,
+                sizeof(szsql),
                 "UPDATE user_basic_information SET "
                 "u_health = '%d', "
+                "u_mana = '%d', "
                 "u_attackpower = '%d', "
+                "u_magicattack = '%d', "
+                "u_independentattack = '%d', "
                 "u_experience = '%lld', "
                 "u_level = '%d', "
                 "u_defence = '%d', "
+                "u_magicdefence = '%d', "
+                "u_strength = '%d', "
+                "u_intelligence = '%d', "
+                "u_vitality = '%d', "
+                "u_spirit = '%d', "
                 "u_critrate = '%.3f', "
-                "u_critdamage = '%.3f' "
+                "u_magiccritrate = '%.3f', "
+                "u_critdamage = '%.3f', "
+                "u_attackspeed = '%.3f', "
+                "u_movespeed = '%.3f', "
+                "u_castspeed = '%.3f', "
+                "u_attackrange = '%d' "
                 "WHERE u_id = '%d';",
                 baseline.maxHealth,
+                baseline.maxMana,
                 baseline.attack,
+                baseline.magicAttack,
+                baseline.independentAttack,
                 userExp,
                 lvl,
                 baseline.defence,
+                baseline.magicDefence,
+                baseline.strength,
+                baseline.intelligence,
+                baseline.vitality,
+                baseline.spirit,
                 baseline.critRate,
+                baseline.magicCritRate,
                 baseline.critDamage,
+                baseline.attackSpeed,
+                baseline.moveSpeed,
+                baseline.castSpeed,
+                baseline.attackRange,
                 player_id
                 );
         if (m_mapPlayerInfo.count(player_id) && m_mapPlayerInfo[player_id]) {
             m_mapPlayerInfo[player_id]->exp = userExp;
             m_mapPlayerInfo[player_id]->level = lvl;
             m_mapPlayerInfo[player_id]->health = baseline.maxHealth;
+            m_mapPlayerInfo[player_id]->mana = baseline.maxMana;
             m_mapPlayerInfo[player_id]->attackPower = baseline.attack;
+            m_mapPlayerInfo[player_id]->magicAttack = baseline.magicAttack;
+            m_mapPlayerInfo[player_id]->independentAttack = baseline.independentAttack;
             m_mapPlayerInfo[player_id]->defense = baseline.defence;
+            m_mapPlayerInfo[player_id]->magicDefense = baseline.magicDefence;
+            m_mapPlayerInfo[player_id]->strength = baseline.strength;
+            m_mapPlayerInfo[player_id]->intelligence = baseline.intelligence;
+            m_mapPlayerInfo[player_id]->vitality = baseline.vitality;
+            m_mapPlayerInfo[player_id]->spirit = baseline.spirit;
             m_mapPlayerInfo[player_id]->critRate = baseline.critRate;
+            m_mapPlayerInfo[player_id]->magicCritRate = baseline.magicCritRate;
             m_mapPlayerInfo[player_id]->critDamage = baseline.critDamage;
+            m_mapPlayerInfo[player_id]->attackSpeed = baseline.attackSpeed;
+            m_mapPlayerInfo[player_id]->moveSpeed = baseline.moveSpeed;
+            m_mapPlayerInfo[player_id]->castSpeed = baseline.castSpeed;
+            m_mapPlayerInfo[player_id]->attackRange = baseline.attackRange;
         }
         return sql.UpdateMySql(szsql);
     }
@@ -1174,10 +1422,26 @@ void core::HandleAttack(quint64 clientId, STRU_ATTACK_RQ* rq) {
     if (rs.isDead) {
         int deadId = rs.targetId;
         QTimer::singleShot(10000, this, [this, deadId]() {
-            updateHealthInDB(deadId, 100);
+            int reviveHealth = 100;
+            CMySql sql;
+            char szsql[MAXSIZE] = {0};
+            std::list<std::string> levelResult;
+            snprintf(szsql,
+                     sizeof(szsql),
+                     "SELECT u_level FROM user_basic_information WHERE u_id = '%d' LIMIT 1;",
+                     deadId);
+            if (sql.SelectMySql(szsql, 1, levelResult) && !levelResult.empty()) {
+                try {
+                    reviveHealth = static_cast<int>(getHP(std::stoi(levelResult.front())));
+                } catch (...) {
+                    reviveHealth = 100;
+                }
+            }
+
+            updateHealthInDB(deadId, reviveHealth);
             STRU_REVIVE_RS srr;
             srr.playerId = deadId;
-            srr.newhealth = 100;
+            srr.newhealth = reviveHealth;
             QByteArray revivePacket = PacketBuilder::build(_default_protocol_revive_rs, srr);
             const auto& clients = m_pTCPNet->getAllClientIds();
             for (quint64 cid : clients) {
@@ -1218,6 +1482,9 @@ int core::calculateDamage(int attackedId, int targetId, int clientDamage)
 
     // // 最终伤害 = 最大0和计算的伤害
     // return std::max(0, reducedDamage);
+    Q_UNUSED(attackedId);
+    Q_UNUSED(targetId);
+    return qMax(0, clientDamage);
 }
 
 // Player_Information core::getPlayerAttributesFromDB(int userId) {

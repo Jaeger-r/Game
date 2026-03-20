@@ -1,7 +1,4 @@
-QT += widgets core gui
-QT += network
-QT += sql
-QT += core
+QT += widgets core gui network sql
 
 CONFIG += c++17
 

@@ -65,7 +65,8 @@ SOURCES       = ../../core.cpp \
 		moc_tcpnet.cpp \
 		moc_Icore.cpp \
 		moc_core.cpp \
-		moc_qkcpserver.cpp
+		moc_qkcpserver.cpp \
+		moc_qkcpsocket.cpp
 OBJECTS       = core.o \
 		main.o \
 		qkcpserver.o \
@@ -80,7 +81,8 @@ OBJECTS       = core.o \
 		moc_tcpnet.o \
 		moc_Icore.o \
 		moc_core.o \
-		moc_qkcpserver.o
+		moc_qkcpserver.o \
+		moc_qkcpsocket.o
 DIST          = /Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
 		/Qt/6.9.1/macos/mkspecs/features/device_config.prf \
 		/Qt/6.9.1/macos/mkspecs/common/unix.conf \
@@ -1046,6 +1048,9 @@ moc_tcpnet.cpp: ../../server2/tcpnet.h \
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../packetbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
@@ -1111,6 +1116,9 @@ moc_core.cpp: ../../core.h \
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../packetbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
@@ -1135,6 +1143,8 @@ moc_qkcpserver.cpp: ../../QtKcp/src/qkcpserver.h \
 
 moc_qkcpsocket.cpp: ../../QtKcp/src/qkcpsocket.h \
 		../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
@@ -1217,11 +1227,18 @@ core.o: ../../core.cpp ../../core.h \
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../packetbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtextstream.h
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtextstream.h \
+		../../QtKcp/src/qkcpsocket.h \
+		../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o core.o ../../core.cpp
 
 main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
@@ -1278,6 +1295,9 @@ main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/Q
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../packetbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
@@ -1322,6 +1342,8 @@ qkcpsocket.o: ../../QtKcp/src/qkcpsocket.cpp ../../QtKcp/src/qkcpsocket_p.h \
 		../../QtKcp/src/ikcp.h \
 		../../QtKcp/src/qkcpsocket.h \
 		../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
@@ -1333,8 +1355,7 @@ qkcpsocket.o: ../../QtKcp/src/qkcpsocket.cpp ../../QtKcp/src/qkcpsocket_p.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkDatagram \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkdatagram.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
-		moc_qkcpsocket.cpp
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qkcpsocket.o ../../QtKcp/src/qkcpsocket.cpp
 
 ikcp.o: ../../QtKcp/3rdparty/kcp/ikcp.c ../../QtKcp/src/ikcp.h
@@ -1382,7 +1403,35 @@ kcpnet.o: ../../server2/kcpnet.cpp ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrandom.h \
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../core.h \
+		../../Icore.h \
+		../../server2/tcpnet.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../mysql/CMySql.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_list.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_com.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_command.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_compress.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/udf_registration_types.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/client_plugin.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/plugin_auth_common.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_version.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_time.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
+		../../mysql/mysqlconnpool.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../packetbuilder.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../QtKcp/src/ikcp.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o kcpnet.o ../../server2/kcpnet.cpp
 
 tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
@@ -1435,6 +1484,9 @@ tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
 		../../packdef.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../combatbalance.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../packetbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
@@ -1499,6 +1551,9 @@ moc_core.o: moc_core.cpp
 
 moc_qkcpserver.o: moc_qkcpserver.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpserver.o moc_qkcpserver.cpp
+
+moc_qkcpsocket.o: moc_qkcpsocket.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpsocket.o moc_qkcpsocket.cpp
 
 ####### Install
 

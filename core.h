@@ -39,10 +39,22 @@ struct Player_Information
     long long exp;
     long long startExp;
     int health;
+    int mana;
     int attackPower;
+    int magicAttack;
+    int independentAttack;
     int defense;
+    int magicDefense;
+    int strength;
+    int intelligence;
+    int vitality;
+    int spirit;
     float critRate;
+    float magicCritRate;
     float critDamage;
+    float attackSpeed;
+    float moveSpeed;
+    float castSpeed;
     float attackRange;
     float positionX;
     float positionY;
@@ -53,10 +65,22 @@ struct Player_Information
                        long long curExp,
                        long long baseExp,
                        int hp,
+                       int mp,
                        int atk,
+                       int matk,
+                       int indepAtk,
                        int def,
+                       int mdef,
+                       int str,
+                       int intl,
+                       int vit,
+                       int spr,
                        float critR,
+                       float magicCrit,
                        float critDmg,
+                       float atkSpeed,
+                       float mvSpeed,
+                       float csSpeed,
                        float atkRange,
                        float px,
                        float py)
@@ -66,10 +90,22 @@ struct Player_Information
         exp(curExp),
         startExp(baseExp),
         health(hp),
+        mana(mp),
         attackPower(atk),
+        magicAttack(matk),
+        independentAttack(indepAtk),
         defense(def),
+        magicDefense(mdef),
+        strength(str),
+        intelligence(intl),
+        vitality(vit),
+        spirit(spr),
         critRate(critR),
+        magicCritRate(magicCrit),
         critDamage(critDmg),
+        attackSpeed(atkSpeed),
+        moveSpeed(mvSpeed),
+        castSpeed(csSpeed),
         attackRange(atkRange),
         positionX(px),
         positionY(py)
@@ -117,6 +153,7 @@ public:
     //PlayerAttributes getPlayerAttributesFromDB(int userId);
     bool updateHealthInDB(int userId, int newHealth);
     bool updatePlayerInDB(int userId, const Player_Information &attr);
+    bool ensurePlayerStatColumns();
     bool ensureEquipmentColumns();
     bool ensureEquipmentStateTable();
     bool ensureProgressStateTable();
@@ -148,6 +185,10 @@ private:
     }
     double getHP(int level) {
         return CombatBalance::playerStats(level).maxHealth;
+    }
+
+    double getMP(int level) {
+        return CombatBalance::playerStats(level).maxMana;
     }
 
     double getATK(int level) {
