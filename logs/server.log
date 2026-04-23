@@ -14891,3 +14891,87 @@ MySQL password is empty. Create GameServer/server.env or set JAEGER_SERVER_MYSQL
     [ ../../server2/tcpnet.cpp : 244 ] "15:50:40:299" checkHeartbeat ()
 [2026-04-23 15:50:40.302] [INFO] [../../server2/tcpnet.cpp:406] void TCPNet::logRuntimeStats()()
     [Monitor] online=0 totalPackets=7281 (+0/5s) logicPackets=5167 (+0/5s) dispatch(active=0) logicAvgMs=2.56 logicMaxMs=77.56
+[2026-04-23 18:48:09.354] [DEBUG] [unknown:0] unknown()
+    [ ../GameServer/core.cpp : 2323 ] "18:48:09:352" core ()
+[2026-04-23 18:48:10.461] [DEBUG] [unknown:0] unknown()
+    TCPServer Listening on: "0.0.0.0" 1234
+[2026-04-23 18:48:10.465] [DEBUG] [unknown:0] unknown()
+    KCP Network Layer Initialized on port: 1235 (Connection managed by TCP)
+[2026-04-23 18:48:10.609] [DEBUG] [unknown:0] unknown()
+    Server is running
+[2026-04-23 18:48:14.494] [INFO] [unknown:0] unknown()
+    [Monitor] online=0 totalPackets=0 (+0/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:16.550] [DEBUG] [unknown:0] unknown()
+    TCP Client Connected: 1
+[2026-04-23 18:48:17.093] [DEBUG] [unknown:0] unknown()
+    KCP Negotiate Success for Client: 1 Conv: 3161689420 Waiting for UDP connection on Server Port: 1235
+[2026-04-23 18:48:17.095] [DEBUG] [unknown:0] unknown()
+    KCP Negotiate Success for Client: 1 Conv: 3161689420 Port: 1235
+[2026-04-23 18:48:19.494] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=3 (+3/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:24.494] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=8 (+5/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:29.494] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=13 (+5/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:34.493] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=18 (+5/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:39.494] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=23 (+5/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:44.495] [INFO] [unknown:0] unknown()
+    [Monitor] online=1 totalPackets=28 (+5/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 18:48:46.289] [DEBUG] [unknown:0] unknown()
+    TCP Client Disconnected: 1
+[2026-04-23 18:48:46.291] [DEBUG] [unknown:0] unknown()
+    KCP Socket Removed for Client: 1
+[2026-04-23 19:24:52.484] [WARN] [unknown:0] unknown()
+    Populating font family aliases took 131 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+[2026-04-23 19:24:52.743] [DEBUG] [unknown:0] unknown()
+    [ ../GameServer/core.cpp : 2739 ] "19:24:52:742" core ()
+[2026-04-23 19:24:52.765] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:24:52.928] [DEBUG] [unknown:0] unknown()
+    TCPServer Listening on: "0.0.0.0" 1234
+[2026-04-23 19:24:52.930] [DEBUG] [unknown:0] unknown()
+    KCP Network Layer Initialized on port: 1235 (Connection managed by TCP)
+[2026-04-23 19:24:53.069] [DEBUG] [unknown:0] unknown()
+    Server is running
+[2026-04-23 19:24:53.697] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:24:57.560] [INFO] [unknown:0] unknown()
+    [Monitor] online=0 totalPackets=0 (+0/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 19:24:57.564] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:24:58.560] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:26:53.650] [WARN] [unknown:0] unknown()
+    Populating font family aliases took 102 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+[2026-04-23 19:26:53.876] [DEBUG] [unknown:0] unknown()
+    [ ../GameServer/core.cpp : 2739 ] "19:26:53:876" core ()
+[2026-04-23 19:26:53.890] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:26:54.002] [DEBUG] [unknown:0] unknown()
+    TCPServer Listening on: "0.0.0.0" 1234
+[2026-04-23 19:26:54.003] [DEBUG] [unknown:0] unknown()
+    KCP Network Layer Initialized on port: 1235 (Connection managed by TCP)
+[2026-04-23 19:26:54.065] [DEBUG] [unknown:0] unknown()
+    Server is running
+[2026-04-23 19:26:54.930] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:26:57.028] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:26:58.062] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:26:58.629] [INFO] [unknown:0] unknown()
+    [Monitor] online=0 totalPackets=0 (+0/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00
+[2026-04-23 19:26:59.063] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:27:00.063] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:27:01.062] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:27:02.062] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:27:03.062] [WARN] [unknown:0] unknown()
+    This plugin does not support propagateSizeHints()
+[2026-04-23 19:27:03.562] [INFO] [unknown:0] unknown()
+    [Monitor] online=0 totalPackets=0 (+0/5s) logicPackets=0 (+0/5s) dispatch(active=0) logicAvgMs=0.00 logicMaxMs=0.00

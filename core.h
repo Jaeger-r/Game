@@ -13,6 +13,7 @@
 #include <ctime>
 #include <algorithm>
 #include <array>
+#include <memory>
 #include "packdef.h"
 #include "combatbalance.h"
 #include "serverconfig.h"
@@ -77,6 +78,8 @@ struct Player_Information
     QVector<QPair<int, int>> warehouseEntries;
     bool warehouseLoaded = false;
     int warehouseUnlockTier = 1;
+    quint32 inventoryStateVersion = 0;
+    quint32 lastPersistedInventoryStateVersion = 0;
     std::array<int, MAX_EQUIPMENT_SLOT_NUM> equippedItemIds{};
     std::array<int, MAX_EQUIPMENT_SLOT_NUM> equippedEnhanceLevels{};
     std::array<int, MAX_EQUIPMENT_SLOT_NUM> equippedForgeLevels{};
@@ -234,6 +237,23 @@ struct PartyRuntimeState
     QVector<int> memberPlayerIds;
 };
 
+struct InventoryPersistenceJob
+{
+    quint64 journalId = 0;
+    int playerId = 0;
+    quint32 version = 0;
+    QString action;
+    QString payloadJson;
+    std::shared_ptr<Player_Information> snapshot;
+    int attempt = 0;
+};
+
+struct InventoryJournalVersionState
+{
+    quint32 latestKnownVersion = 0;
+    quint32 latestAppliedVersion = 0;
+};
+
 class TCPNet;
 class core : public ICore
 {
@@ -287,6 +307,7 @@ public:
     bool ensureEquipmentStateTable();
     bool ensureProgressStateTable();
     bool ensureWarehouseStateTable();
+    bool ensureInventoryJournalTable();
     ServerMonitorSnapshot monitorSnapshot() const;
     ServerModuleStatus moduleStatus() const;
 public:
@@ -313,6 +334,7 @@ private:
     std::vector<Player_Information>players;
     ofstream outFile;
     QTimer* m_dungeonTickTimer = nullptr;
+    QTimer* m_inventoryPersistTimer = nullptr;
     QHash<QString, DungeonRoomState> m_dungeonRooms;
     QHash<QString, ServerSkillHitWindow> m_skillHitWindows;
     QHash<int, PartyRuntimeState> m_partyStates;
@@ -325,6 +347,8 @@ private:
 
     std::unordered_map<int, QTimer*> m_mapDazuoTimer;
     std::unordered_map<int, std::shared_ptr<Player_Information>> m_mapPlayerInfo;
+    QHash<int, QVector<InventoryPersistenceJob>> m_inventoryPersistQueues;
+    int m_lastInventoryPersistPlayerId = 0;
 private:
     Player_Information* findTrackedPlayer(int userId);
     const Player_Information* findTrackedPlayer(int userId) const;
@@ -416,6 +440,19 @@ private:
                                           int monsterLevel,
                                           CombatBalance::MonsterTier tier) const;
     bool isClientOnline(quint64 clientId) const;
+    InventoryJournalVersionState loadInventoryJournalVersionState(int playerId) const;
+    void primeTrackedPlayerInventoryVersion(Player_Information& playerInfo);
+    bool stageInventoryPersistence(const Player_Information& playerInfo,
+                                   const QString& action,
+                                   const QString& eventPayloadJson,
+                                   QString* errorMessage = nullptr);
+    void enqueueInventoryPersistence(const Player_Information& playerInfo,
+                                     const QString& action,
+                                     const QString& payloadJson,
+                                     quint64 journalId = 0);
+    void loadPendingInventoryPersistenceJobs();
+    void processInventoryPersistenceQueue();
+    int nextInventoryPersistencePlayerId();
     long long getEXP(int level){
         return CombatBalance::playerStats(level).expToNext;
     }

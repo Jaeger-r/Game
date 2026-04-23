@@ -157,6 +157,422 @@ bool ensureSchemaColumnExists(CMySql& sql,
     return updateQuery(sql, alterSql);
 }
 
+bool querySchemaIndexExists(CMySql& sql,
+                            const QString& tableName,
+                            const QString& indexName,
+                            bool* exists)
+{
+    std::list<std::string> result;
+    const QString query =
+        QStringLiteral("SELECT COUNT(*) FROM information_schema.STATISTICS "
+                       "WHERE TABLE_SCHEMA = DATABASE() "
+                       "AND TABLE_NAME = '%1' "
+                       "AND INDEX_NAME = '%2';")
+            .arg(escapedSqlString(tableName), escapedSqlString(indexName));
+    if (!selectQuery(sql, query, 1, result)) {
+        return false;
+    }
+
+    if (exists) {
+        *exists = !result.empty() && result.front() != "0";
+    }
+    return true;
+}
+
+bool ensureSchemaIndexExists(CMySql& sql,
+                             const QString& tableName,
+                             const QString& indexName,
+                             const QString& indexDefinition)
+{
+    bool exists = false;
+    if (!querySchemaIndexExists(sql, tableName, indexName, &exists)) {
+        return false;
+    }
+    if (exists) {
+        return true;
+    }
+
+    const QString alterSql =
+        QStringLiteral("ALTER TABLE %1 ADD %2;")
+            .arg(tableName, indexDefinition);
+    return updateQuery(sql, alterSql);
+}
+
+constexpr const char* kInventoryJournalStatusPending = "pending";
+constexpr const char* kInventoryJournalStatusApplied = "applied";
+constexpr const char* kInventoryJournalStatusSuperseded = "superseded";
+constexpr const char* kInventoryJournalStatusFailed = "failed";
+
+QVector<QPair<int, int>> normalizedPersistEntries(const QVector<QPair<int, int>>& rawEntries);
+
+qint64 jsonValueToLongLong(const QJsonValue& value, qint64 fallback = 0)
+{
+    if (value.isString()) {
+        bool ok = false;
+        const qint64 parsed = value.toString().toLongLong(&ok);
+        return ok ? parsed : fallback;
+    }
+    if (value.isDouble()) {
+        return static_cast<qint64>(value.toDouble(static_cast<double>(fallback)));
+    }
+    return fallback;
+}
+
+int jsonValueToInt(const QJsonValue& value, int fallback = 0)
+{
+    if (value.isDouble()) {
+        return value.toInt(fallback);
+    }
+    if (value.isString()) {
+        bool ok = false;
+        const int parsed = value.toString().toInt(&ok);
+        return ok ? parsed : fallback;
+    }
+    return fallback;
+}
+
+float jsonValueToFloat(const QJsonValue& value, float fallback = 0.0f)
+{
+    if (value.isDouble()) {
+        return static_cast<float>(value.toDouble(static_cast<double>(fallback)));
+    }
+    if (value.isString()) {
+        bool ok = false;
+        const float parsed = value.toString().toFloat(&ok);
+        return ok ? parsed : fallback;
+    }
+    return fallback;
+}
+
+QJsonArray inventoryJournalItemEntriesToJson(const QVector<QPair<int, int>>& entries)
+{
+    QJsonArray array;
+    for (const auto& entry : entries) {
+        if (entry.first <= 0 || entry.second <= 0) {
+            continue;
+        }
+
+        QJsonObject itemObject;
+        itemObject.insert(QStringLiteral("itemId"), entry.first);
+        itemObject.insert(QStringLiteral("count"), entry.second);
+        array.append(itemObject);
+    }
+    return array;
+}
+
+QVector<QPair<int, int>> inventoryJournalItemEntriesFromJson(const QJsonArray& array)
+{
+    QVector<QPair<int, int>> entries;
+    entries.reserve(array.size());
+    for (const QJsonValue& value : array) {
+        const QJsonObject itemObject = value.toObject();
+        const int itemId = jsonValueToInt(itemObject.value(QStringLiteral("itemId")));
+        const int count = jsonValueToInt(itemObject.value(QStringLiteral("count")));
+        if (itemId <= 0 || count <= 0) {
+            continue;
+        }
+        entries.push_back(qMakePair(itemId, count));
+    }
+    return entries;
+}
+
+QJsonArray inventoryJournalEquipmentStateToJson(const Player_Information& playerInfo)
+{
+    QJsonArray array;
+    for (int slotIndex = 0; slotIndex < MAX_EQUIPMENT_SLOT_NUM; ++slotIndex) {
+        QJsonObject slotObject;
+        slotObject.insert(QStringLiteral("slotIndex"), slotIndex);
+        slotObject.insert(QStringLiteral("itemId"), playerInfo.equippedItemIds[slotIndex]);
+        slotObject.insert(QStringLiteral("enhanceLevel"), playerInfo.equippedEnhanceLevels[slotIndex]);
+        slotObject.insert(QStringLiteral("forgeLevel"), playerInfo.equippedForgeLevels[slotIndex]);
+        slotObject.insert(QStringLiteral("enchantKind"), playerInfo.equippedEnchantKinds[slotIndex]);
+        slotObject.insert(QStringLiteral("enchantValue"), playerInfo.equippedEnchantValues[slotIndex]);
+        slotObject.insert(QStringLiteral("enhanceSuccessCount"),
+                          playerInfo.equippedEnhanceSuccessCounts[slotIndex]);
+        slotObject.insert(QStringLiteral("forgeSuccessCount"),
+                          playerInfo.equippedForgeSuccessCounts[slotIndex]);
+        slotObject.insert(QStringLiteral("enchantSuccessCount"),
+                          playerInfo.equippedEnchantSuccessCounts[slotIndex]);
+        array.append(slotObject);
+    }
+    return array;
+}
+
+void applyInventoryJournalEquipmentStateFromJson(const QJsonArray& array, Player_Information* playerInfo)
+{
+    if (!playerInfo) {
+        return;
+    }
+
+    for (const QJsonValue& value : array) {
+        const QJsonObject slotObject = value.toObject();
+        const int slotIndex =
+            qBound(0, jsonValueToInt(slotObject.value(QStringLiteral("slotIndex"))), MAX_EQUIPMENT_SLOT_NUM - 1);
+        playerInfo->equippedItemIds[slotIndex] =
+            qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("itemId"))));
+        playerInfo->equippedEnhanceLevels[slotIndex] =
+            qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("enhanceLevel"))));
+        playerInfo->equippedForgeLevels[slotIndex] =
+            qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("forgeLevel"))));
+        playerInfo->equippedEnchantKinds[slotIndex] =
+            qBound(0, jsonValueToInt(slotObject.value(QStringLiteral("enchantKind"))), 4);
+        playerInfo->equippedEnchantValues[slotIndex] =
+            qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("enchantValue"))));
+        playerInfo->equippedEnhanceSuccessCounts[slotIndex] =
+            qMax(playerInfo->equippedEnhanceLevels[slotIndex],
+                 qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("enhanceSuccessCount")))));
+        playerInfo->equippedForgeSuccessCounts[slotIndex] =
+            qMax(playerInfo->equippedForgeLevels[slotIndex],
+                 qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("forgeSuccessCount")))));
+        playerInfo->equippedEnchantSuccessCounts[slotIndex] =
+            qMax(0, jsonValueToInt(slotObject.value(QStringLiteral("enchantSuccessCount"))));
+        if (playerInfo->equippedEnchantKinds[slotIndex] != 0) {
+            playerInfo->equippedEnchantSuccessCounts[slotIndex] =
+                qMax(1, playerInfo->equippedEnchantSuccessCounts[slotIndex]);
+        }
+    }
+}
+
+QString buildInventorySnapshotJournalPayload(const Player_Information& playerInfo,
+                                             const QString& action,
+                                             const QString& eventPayloadJson)
+{
+    QJsonObject playerObject;
+    playerObject.insert(QStringLiteral("playerId"), playerInfo.player_UserId);
+    playerObject.insert(QStringLiteral("playerName"), playerInfo.playerName);
+    playerObject.insert(QStringLiteral("mapId"), playerInfo.mapId.trimmed().isEmpty()
+                                                     ? QStringLiteral("BornWorld")
+                                                     : playerInfo.mapId.trimmed());
+    playerObject.insert(QStringLiteral("instanceId"), QString::number(playerInfo.instanceId));
+    playerObject.insert(QStringLiteral("level"), playerInfo.level);
+    playerObject.insert(QStringLiteral("experience"), QString::number(playerInfo.exp));
+    playerObject.insert(QStringLiteral("health"), playerInfo.health);
+    playerObject.insert(QStringLiteral("mana"), playerInfo.mana);
+    playerObject.insert(QStringLiteral("attackPower"), playerInfo.attackPower);
+    playerObject.insert(QStringLiteral("magicAttack"), playerInfo.magicAttack);
+    playerObject.insert(QStringLiteral("independentAttack"), playerInfo.independentAttack);
+    playerObject.insert(QStringLiteral("defense"), playerInfo.defense);
+    playerObject.insert(QStringLiteral("magicDefense"), playerInfo.magicDefense);
+    playerObject.insert(QStringLiteral("strength"), playerInfo.strength);
+    playerObject.insert(QStringLiteral("intelligence"), playerInfo.intelligence);
+    playerObject.insert(QStringLiteral("vitality"), playerInfo.vitality);
+    playerObject.insert(QStringLiteral("spirit"), playerInfo.spirit);
+    playerObject.insert(QStringLiteral("critRate"), playerInfo.critRate);
+    playerObject.insert(QStringLiteral("magicCritRate"), playerInfo.magicCritRate);
+    playerObject.insert(QStringLiteral("critDamage"), playerInfo.critDamage);
+    playerObject.insert(QStringLiteral("attackSpeed"), playerInfo.attackSpeed);
+    playerObject.insert(QStringLiteral("moveSpeed"), playerInfo.moveSpeed);
+    playerObject.insert(QStringLiteral("castSpeed"), playerInfo.castSpeed);
+    playerObject.insert(QStringLiteral("attackRange"), playerInfo.attackRange);
+    playerObject.insert(QStringLiteral("positionX"), playerInfo.positionX);
+    playerObject.insert(QStringLiteral("positionY"), playerInfo.positionY);
+    playerObject.insert(QStringLiteral("direction"), playerInfo.direction);
+    playerObject.insert(QStringLiteral("warehouseUnlockTier"), playerInfo.warehouseUnlockTier);
+    playerObject.insert(QStringLiteral("bagEntries"), inventoryJournalItemEntriesToJson(playerInfo.bagEntries));
+    playerObject.insert(QStringLiteral("warehouseEntries"),
+                        inventoryJournalItemEntriesToJson(playerInfo.warehouseEntries));
+    playerObject.insert(QStringLiteral("equipment"), inventoryJournalEquipmentStateToJson(playerInfo));
+
+    QJsonObject root;
+    root.insert(QStringLiteral("kind"), QStringLiteral("inventory_snapshot"));
+    root.insert(QStringLiteral("action"), action.trimmed());
+    root.insert(QStringLiteral("stateVersion"), static_cast<int>(playerInfo.inventoryStateVersion));
+    root.insert(QStringLiteral("player"), playerObject);
+
+    const QByteArray eventUtf8 = eventPayloadJson.trimmed().toUtf8();
+    if (!eventUtf8.isEmpty()) {
+        QJsonParseError error{};
+        const QJsonDocument eventDocument = QJsonDocument::fromJson(eventUtf8, &error);
+        if (error.error == QJsonParseError::NoError && !eventDocument.isNull()) {
+            if (eventDocument.isObject()) {
+                root.insert(QStringLiteral("event"), eventDocument.object());
+            } else if (eventDocument.isArray()) {
+                root.insert(QStringLiteral("eventItems"), eventDocument.array());
+            } else {
+                root.insert(QStringLiteral("eventText"), QString::fromUtf8(eventUtf8));
+            }
+        } else {
+            root.insert(QStringLiteral("eventText"), QString::fromUtf8(eventUtf8));
+        }
+    }
+
+    return QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact));
+}
+
+bool parseInventorySnapshotJournalPayload(const QString& payloadJson,
+                                          Player_Information* playerInfo,
+                                          QString* actionOut = nullptr)
+{
+    if (!playerInfo) {
+        return false;
+    }
+
+    QJsonParseError error{};
+    const QJsonDocument document = QJsonDocument::fromJson(payloadJson.toUtf8(), &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) {
+        return false;
+    }
+
+    const QJsonObject root = document.object();
+    if (root.value(QStringLiteral("kind")).toString() != QStringLiteral("inventory_snapshot")) {
+        return false;
+    }
+
+    const QJsonObject playerObject = root.value(QStringLiteral("player")).toObject();
+    const int playerId = qMax(0, jsonValueToInt(playerObject.value(QStringLiteral("playerId"))));
+    if (playerId <= 0) {
+        return false;
+    }
+
+    Player_Information parsed(playerId,
+                              playerObject.value(QStringLiteral("playerName")).toString(),
+                              qMax(1, jsonValueToInt(playerObject.value(QStringLiteral("level")), 1)),
+                              qMax<qint64>(0, jsonValueToLongLong(playerObject.value(QStringLiteral("experience")))),
+                              qMax<qint64>(0, jsonValueToLongLong(playerObject.value(QStringLiteral("experience")))),
+                              qMax(0, jsonValueToInt(playerObject.value(QStringLiteral("health")))),
+                              qMax(0, jsonValueToInt(playerObject.value(QStringLiteral("mana")))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("attackPower"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("magicAttack"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("independentAttack"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("defense"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("magicDefense"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("strength"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("intelligence"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("vitality"))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("spirit"))),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("critRate"))),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("magicCritRate"))),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("critDamage")), 1.5f),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("attackSpeed")), 1.0f),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("moveSpeed")), 1.0f),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("castSpeed")), 1.0f),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("attackRange"))),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("positionX"))),
+                              jsonValueToFloat(playerObject.value(QStringLiteral("positionY"))),
+                              0,
+                              playerObject.value(QStringLiteral("mapId")).toString(),
+                              qMax<qint64>(0, jsonValueToLongLong(playerObject.value(QStringLiteral("instanceId")))),
+                              jsonValueToInt(playerObject.value(QStringLiteral("direction")), 3));
+
+    parsed.warehouseUnlockTier =
+        qMax(1, jsonValueToInt(playerObject.value(QStringLiteral("warehouseUnlockTier")), 1));
+    parsed.inventoryStateVersion =
+        static_cast<quint32>(qMax(0, jsonValueToInt(root.value(QStringLiteral("stateVersion")))));
+    parsed.lastPersistedInventoryStateVersion = 0;
+    parsed.bagEntries =
+        inventoryJournalItemEntriesFromJson(playerObject.value(QStringLiteral("bagEntries")).toArray());
+    parsed.warehouseEntries =
+        inventoryJournalItemEntriesFromJson(playerObject.value(QStringLiteral("warehouseEntries")).toArray());
+    parsed.bagEntries = normalizedPersistEntries(parsed.bagEntries);
+    parsed.warehouseEntries = normalizedPersistEntries(parsed.warehouseEntries);
+    parsed.bagLoaded = true;
+    parsed.warehouseLoaded = true;
+    parsed.authoritativeBagUpdatedAtMs = 0;
+    applyInventoryJournalEquipmentStateFromJson(playerObject.value(QStringLiteral("equipment")).toArray(),
+                                                &parsed);
+
+    *playerInfo = parsed;
+    if (actionOut) {
+        *actionOut = root.value(QStringLiteral("action")).toString().trimmed();
+    }
+    return true;
+}
+
+bool appendPendingInventoryJournalEntry(CMySql& sql,
+                                        int userId,
+                                        quint32 stateVersion,
+                                        const QString& action,
+                                        const QString& payloadJson,
+                                        quint64* journalId = nullptr)
+{
+    const bool ok = updatePreparedQuery(
+        sql,
+        "INSERT INTO user_inventory_journal "
+        "(u_id, state_version, action_key, payload_json, status, attempt_count, last_error, applied_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+        sqlParams(userId,
+                  static_cast<int>(stateVersion),
+                  utf8StdString(action.trimmed()),
+                  utf8StdString(payloadJson),
+                  utf8StdString(QString::fromUtf8(kInventoryJournalStatusPending)),
+                  0,
+                  CMySql::Param::null(),
+                  CMySql::Param::null()));
+
+    if (ok && journalId) {
+        *journalId = sql.LastInsertId();
+    }
+    return ok;
+}
+
+bool markInventoryJournalApplied(CMySql& sql, quint64 journalId, int attemptCount)
+{
+    return updatePreparedQuery(
+        sql,
+        "UPDATE user_inventory_journal "
+        "SET status = ?, attempt_count = ?, last_error = ?, applied_at = CURRENT_TIMESTAMP "
+        "WHERE journal_id = ?;",
+        sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusApplied)),
+                  qMax(0, attemptCount),
+                  CMySql::Param::null(),
+                  static_cast<unsigned long long>(journalId)));
+}
+
+bool markInventoryJournalSuperseded(CMySql& sql, quint64 journalId)
+{
+    return updatePreparedQuery(
+        sql,
+        "UPDATE user_inventory_journal "
+        "SET status = ?, last_error = ?, applied_at = IFNULL(applied_at, CURRENT_TIMESTAMP) "
+        "WHERE journal_id = ?;",
+        sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusSuperseded)),
+                  CMySql::Param::null(),
+                  static_cast<unsigned long long>(journalId)));
+}
+
+bool markInventoryJournalRetryPending(quint64 journalId, int attemptCount, const QString& lastError)
+{
+    if (journalId == 0) {
+        return false;
+    }
+
+    CMySql sql;
+    return updatePreparedQuery(
+        sql,
+        "UPDATE user_inventory_journal "
+        "SET status = ?, attempt_count = ?, last_error = ?, applied_at = ? "
+        "WHERE journal_id = ?;",
+        sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusPending)),
+                  qMax(0, attemptCount),
+                  utf8StdString(lastError.left(240)),
+                  CMySql::Param::null(),
+                  static_cast<unsigned long long>(journalId)));
+}
+
+bool markInventoryJournalFailed(quint64 journalId, int attemptCount, const QString& lastError)
+{
+    if (journalId == 0) {
+        return false;
+    }
+
+    CMySql sql;
+    return updatePreparedQuery(
+        sql,
+        "UPDATE user_inventory_journal "
+        "SET status = ?, attempt_count = ?, last_error = ?, applied_at = ? "
+        "WHERE journal_id = ?;",
+        sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusFailed)),
+                  qMax(0, attemptCount),
+                  utf8StdString(lastError.left(240)),
+                  CMySql::Param::null(),
+                  static_cast<unsigned long long>(journalId)));
+}
+
+int inventoryPersistenceRetryDelayMs(int attempt)
+{
+    return qBound(150, 250 * qMax(1, attempt), 5000);
+}
+
 bool updateUserBasicInformation(CMySql& sql,
                                 int userId,
                                 int health,
@@ -339,6 +755,8 @@ bool upsertPlayerProgressState(CMySql& sql,
 
 QVector<QPair<int, int>> normalizedPersistEntries(const QVector<QPair<int, int>>& rawEntries);
 ItemCountMap buildItemCountMap(const QVector<QPair<int, int>>& rawEntries);
+void clearTrackedEquipmentSlot(Player_Information& playerInfo, int slotIndex);
+int warehouseSlotCapacityForTier(int tier);
 bool persistItemTableEntries(CMySql& sql,
                              const QString& tableName,
                              int userId,
@@ -495,6 +913,297 @@ bool consumeTrackedBagCosts(Player_Information& playerInfo,
     return true;
 }
 
+bool addTrackedStorageItems(QVector<QPair<int, int>>& entries, int maxEntries, int itemId, int count)
+{
+    if (itemId <= 0 || count <= 0) {
+        return false;
+    }
+
+    ItemCountMap counts = buildItemCountMap(entries);
+    if (!counts.contains(itemId) && counts.size() >= maxEntries) {
+        return false;
+    }
+
+    counts[itemId] += count;
+    entries = itemCountMapToEntries(counts);
+    return true;
+}
+
+bool consumeTrackedStorageItems(QVector<QPair<int, int>>& entries, int itemId, int count)
+{
+    if (itemId <= 0 || count <= 0) {
+        return false;
+    }
+
+    ItemCountMap counts = buildItemCountMap(entries);
+    const int owned = counts.value(itemId, 0);
+    if (owned < count) {
+        return false;
+    }
+
+    const int nextCount = owned - count;
+    if (nextCount > 0) {
+        counts[itemId] = nextCount;
+    } else {
+        counts.remove(itemId);
+    }
+
+    entries = itemCountMapToEntries(counts);
+    return true;
+}
+
+bool serverCanEquipItemInSlot(const Player_Information& playerInfo,
+                              int itemId,
+                              int slotIndex,
+                              QString* failureMessage)
+{
+    const ServerItemMetadata* metadata = serverItemMetadata(itemId);
+    if (!metadata) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("目标物品不存在。");
+        }
+        return false;
+    }
+
+    if (slotIndex < 0 || slotIndex >= MAX_EQUIPMENT_SLOT_NUM) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("目标装备槽位无效。");
+        }
+        return false;
+    }
+
+    if (metadata->equipSlotIndex != slotIndex) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("%1 无法穿戴到该装备槽位。").arg(metadata->name);
+        }
+        return false;
+    }
+
+    if (metadata->levelRequirement > playerInfo.level) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("%1 需要角色达到 Lv.%2 才能装备。")
+                                  .arg(metadata->name)
+                                  .arg(metadata->levelRequirement);
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool moveTrackedBagItemToEquipment(Player_Information& playerInfo,
+                                   int itemId,
+                                   int slotIndex,
+                                   QString* failureMessage)
+{
+    if (!serverCanEquipItemInSlot(playerInfo, itemId, slotIndex, failureMessage)) {
+        return false;
+    }
+
+    if (!consumeTrackedStorageItems(playerInfo.bagEntries, itemId, 1)) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("背包中没有可穿戴的目标装备。");
+        }
+        return false;
+    }
+
+    const int previousEquippedItemId = playerInfo.equippedItemIds[slotIndex];
+    if (previousEquippedItemId > 0
+        && !addTrackedStorageItems(playerInfo.bagEntries, MAX_BAG_ITEM_NUM, previousEquippedItemId, 1))
+    {
+        addTrackedStorageItems(playerInfo.bagEntries, MAX_BAG_ITEM_NUM, itemId, 1);
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("背包空间不足，无法替换当前装备。");
+        }
+        return false;
+    }
+
+    clearTrackedEquipmentSlot(playerInfo, slotIndex);
+    playerInfo.equippedItemIds[slotIndex] = itemId;
+    playerInfo.bagEntries = normalizedPersistEntries(playerInfo.bagEntries);
+    playerInfo.bagLoaded = true;
+    playerInfo.authoritativeBagUpdatedAtMs = 0;
+    return true;
+}
+
+bool moveTrackedEquipmentToBag(Player_Information& playerInfo,
+                               int slotIndex,
+                               QString* failureMessage)
+{
+    if (slotIndex < 0 || slotIndex >= MAX_EQUIPMENT_SLOT_NUM) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("目标装备槽位无效。");
+        }
+        return false;
+    }
+
+    const int equippedItemId = playerInfo.equippedItemIds[slotIndex];
+    if (equippedItemId <= 0) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("该槽位当前没有可卸下的装备。");
+        }
+        return false;
+    }
+
+    if (!addTrackedStorageItems(playerInfo.bagEntries, MAX_BAG_ITEM_NUM, equippedItemId, 1)) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("背包空间不足，无法卸下该装备。");
+        }
+        return false;
+    }
+
+    clearTrackedEquipmentSlot(playerInfo, slotIndex);
+    playerInfo.bagEntries = normalizedPersistEntries(playerInfo.bagEntries);
+    playerInfo.bagLoaded = true;
+    playerInfo.authoritativeBagUpdatedAtMs = 0;
+    return true;
+}
+
+bool moveTrackedEquipmentBetweenSlots(Player_Information& playerInfo,
+                                      int fromSlot,
+                                      int toSlot,
+                                      QString* failureMessage)
+{
+    if (fromSlot < 0 || fromSlot >= MAX_EQUIPMENT_SLOT_NUM || toSlot < 0 || toSlot >= MAX_EQUIPMENT_SLOT_NUM) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("目标装备槽位无效。");
+        }
+        return false;
+    }
+
+    if (fromSlot == toSlot) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("源槽位与目标槽位相同。");
+        }
+        return false;
+    }
+
+    const int fromItemId = playerInfo.equippedItemIds[fromSlot];
+    const int toItemId = playerInfo.equippedItemIds[toSlot];
+    if (fromItemId <= 0) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("源装备槽位当前为空。");
+        }
+        return false;
+    }
+
+    if (!serverCanEquipItemInSlot(playerInfo, fromItemId, toSlot, failureMessage)) {
+        return false;
+    }
+    if (toItemId > 0 && !serverCanEquipItemInSlot(playerInfo, toItemId, fromSlot, failureMessage)) {
+        return false;
+    }
+
+    std::swap(playerInfo.equippedItemIds[fromSlot], playerInfo.equippedItemIds[toSlot]);
+    std::swap(playerInfo.equippedEnhanceLevels[fromSlot], playerInfo.equippedEnhanceLevels[toSlot]);
+    std::swap(playerInfo.equippedForgeLevels[fromSlot], playerInfo.equippedForgeLevels[toSlot]);
+    std::swap(playerInfo.equippedEnchantKinds[fromSlot], playerInfo.equippedEnchantKinds[toSlot]);
+    std::swap(playerInfo.equippedEnchantValues[fromSlot], playerInfo.equippedEnchantValues[toSlot]);
+    std::swap(playerInfo.equippedEnhanceSuccessCounts[fromSlot],
+              playerInfo.equippedEnhanceSuccessCounts[toSlot]);
+    std::swap(playerInfo.equippedForgeSuccessCounts[fromSlot],
+              playerInfo.equippedForgeSuccessCounts[toSlot]);
+    std::swap(playerInfo.equippedEnchantSuccessCounts[fromSlot],
+              playerInfo.equippedEnchantSuccessCounts[toSlot]);
+    return true;
+}
+
+bool moveTrackedBagItemsToWarehouse(Player_Information& playerInfo,
+                                    int itemId,
+                                    int transferCount,
+                                    QString* failureMessage)
+{
+    const int ownedCount = trackedBagItemCount(playerInfo, itemId);
+    if (ownedCount <= 0) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("背包中没有可存入仓库的目标物品。");
+        }
+        return false;
+    }
+
+    const int normalizedTransferCount = qBound(0, transferCount, ownedCount);
+    if (normalizedTransferCount == 0) {
+        return true;
+    }
+
+    const int warehouseCapacity = warehouseSlotCapacityForTier(playerInfo.warehouseUnlockTier);
+    if (!buildItemCountMap(playerInfo.warehouseEntries).contains(itemId)
+        && buildItemCountMap(playerInfo.warehouseEntries).size() >= warehouseCapacity)
+    {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("仓库空间不足，无法继续存入该物品。");
+        }
+        return false;
+    }
+
+    if (!consumeTrackedStorageItems(playerInfo.bagEntries, itemId, normalizedTransferCount)
+        || !addTrackedStorageItems(playerInfo.warehouseEntries,
+                                   warehouseCapacity,
+                                   itemId,
+                                   normalizedTransferCount))
+    {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("仓库存放失败，请稍后重试。");
+        }
+        return false;
+    }
+
+    playerInfo.bagEntries = normalizedPersistEntries(playerInfo.bagEntries);
+    playerInfo.warehouseEntries = normalizedPersistEntries(playerInfo.warehouseEntries);
+    playerInfo.bagLoaded = true;
+    playerInfo.warehouseLoaded = true;
+    playerInfo.authoritativeBagUpdatedAtMs = 0;
+    return true;
+}
+
+bool moveTrackedWarehouseItemsToBag(Player_Information& playerInfo,
+                                    int itemId,
+                                    int transferCount,
+                                    QString* failureMessage)
+{
+    ItemCountMap warehouseCounts = buildItemCountMap(playerInfo.warehouseEntries);
+    const int ownedCount = warehouseCounts.value(itemId, 0);
+    if (ownedCount <= 0) {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("仓库中没有可取回的目标物品。");
+        }
+        return false;
+    }
+
+    const int normalizedTransferCount = qBound(0, transferCount, ownedCount);
+    if (normalizedTransferCount == 0) {
+        return true;
+    }
+
+    if (!buildItemCountMap(playerInfo.bagEntries).contains(itemId)
+        && buildItemCountMap(playerInfo.bagEntries).size() >= MAX_BAG_ITEM_NUM)
+    {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("背包空间不足，无法从仓库取回该物品。");
+        }
+        return false;
+    }
+
+    if (!consumeTrackedStorageItems(playerInfo.warehouseEntries, itemId, normalizedTransferCount)
+        || !addTrackedStorageItems(playerInfo.bagEntries,
+                                   MAX_BAG_ITEM_NUM,
+                                   itemId,
+                                   normalizedTransferCount))
+    {
+        if (failureMessage) {
+            *failureMessage = QStringLiteral("取回物品失败，请稍后重试。");
+        }
+        return false;
+    }
+
+    playerInfo.bagEntries = normalizedPersistEntries(playerInfo.bagEntries);
+    playerInfo.warehouseEntries = normalizedPersistEntries(playerInfo.warehouseEntries);
+    playerInfo.bagLoaded = true;
+    playerInfo.warehouseLoaded = true;
+    playerInfo.authoritativeBagUpdatedAtMs = 0;
+    return true;
+}
+
 int serverStrengthenSuccessRate(const Player_Information& playerInfo, int slotIndex)
 {
     return JaegerShared::craftSuccessRateFor(serverInventoryRules().strengthen,
@@ -616,7 +1325,7 @@ bool persistTrackedPlayerInventoryState(CMySql& sql, const Player_Information& p
                                               playerInfo.positionY);
 }
 
-bool persistTrackedPlayerInventoryState(const Player_Information& playerInfo)
+[[maybe_unused]] bool persistTrackedPlayerInventoryState(const Player_Information& playerInfo)
 {
     CMySql sql;
     if (!sql.BeginTransaction()) {
@@ -634,40 +1343,214 @@ bool persistTrackedPlayerInventoryState(const Player_Information& playerInfo)
     return true;
 }
 
-void fillInventoryActionSnapshot(STRU_INVENTORY_ACTION_RS& rs, const Player_Information& playerInfo)
+int fillInventoryDeltaEntries(InventoryItemDeltaEntry* output,
+                              int maxCount,
+                              const QVector<QPair<int, int>>& previousEntries,
+                              const QVector<QPair<int, int>>& currentEntries)
+{
+    if (!output || maxCount <= 0) {
+        return 0;
+    }
+
+    const ItemCountMap beforeCounts = buildItemCountMap(previousEntries);
+    const ItemCountMap afterCounts = buildItemCountMap(currentEntries);
+    QSet<int> itemIds;
+    for (auto it = beforeCounts.constBegin(); it != beforeCounts.constEnd(); ++it) {
+        itemIds.insert(it.key());
+    }
+    for (auto it = afterCounts.constBegin(); it != afterCounts.constEnd(); ++it) {
+        itemIds.insert(it.key());
+    }
+
+    QList<int> orderedItemIds = itemIds.values();
+    std::sort(orderedItemIds.begin(), orderedItemIds.end());
+
+    int count = 0;
+    for (int itemId : orderedItemIds) {
+        if (count >= maxCount) {
+            break;
+        }
+
+        const int delta = afterCounts.value(itemId, 0) - beforeCounts.value(itemId, 0);
+        if (itemId <= 0 || delta == 0) {
+            continue;
+        }
+
+        output[count].itemId = itemId;
+        output[count].delta = delta;
+        ++count;
+    }
+    return count;
+}
+
+int fillEquipmentChangeEntries(InventoryEquipmentChangeEntry* output,
+                               int maxCount,
+                               const Player_Information& previousInfo,
+                               const Player_Information& currentInfo)
+{
+    if (!output || maxCount <= 0) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int slotIndex = 0; slotIndex < MAX_EQUIPMENT_SLOT_NUM && count < maxCount; ++slotIndex) {
+        const bool changed =
+            previousInfo.equippedItemIds[slotIndex] != currentInfo.equippedItemIds[slotIndex]
+            || previousInfo.equippedEnhanceLevels[slotIndex] != currentInfo.equippedEnhanceLevels[slotIndex]
+            || previousInfo.equippedForgeLevels[slotIndex] != currentInfo.equippedForgeLevels[slotIndex]
+            || previousInfo.equippedEnchantKinds[slotIndex] != currentInfo.equippedEnchantKinds[slotIndex]
+            || previousInfo.equippedEnchantValues[slotIndex] != currentInfo.equippedEnchantValues[slotIndex]
+            || previousInfo.equippedEnhanceSuccessCounts[slotIndex]
+                   != currentInfo.equippedEnhanceSuccessCounts[slotIndex]
+            || previousInfo.equippedForgeSuccessCounts[slotIndex]
+                   != currentInfo.equippedForgeSuccessCounts[slotIndex]
+            || previousInfo.equippedEnchantSuccessCounts[slotIndex]
+                   != currentInfo.equippedEnchantSuccessCounts[slotIndex];
+        if (!changed) {
+            continue;
+        }
+
+        InventoryEquipmentChangeEntry& entry = output[count];
+        entry.slotIndex = slotIndex;
+        entry.itemId = currentInfo.equippedItemIds[slotIndex];
+        entry.enhanceLevel = currentInfo.equippedEnhanceLevels[slotIndex];
+        entry.forgeLevel = currentInfo.equippedForgeLevels[slotIndex];
+        entry.enchantKind = currentInfo.equippedEnchantKinds[slotIndex];
+        entry.enchantValue = currentInfo.equippedEnchantValues[slotIndex];
+        entry.enhanceSuccessCount = currentInfo.equippedEnhanceSuccessCounts[slotIndex];
+        entry.forgeSuccessCount = currentInfo.equippedForgeSuccessCounts[slotIndex];
+        entry.enchantSuccessCount = currentInfo.equippedEnchantSuccessCounts[slotIndex];
+        ++count;
+    }
+    return count;
+}
+
+QString inventoryActionName(quint16 action)
+{
+    switch (action) {
+    case _inventory_action_use_consumable: return QStringLiteral("use_consumable");
+    case _inventory_action_unlock_warehouse: return QStringLiteral("unlock_warehouse");
+    case _inventory_action_strengthen: return QStringLiteral("strengthen");
+    case _inventory_action_forge: return QStringLiteral("forge");
+    case _inventory_action_enchant: return QStringLiteral("enchant");
+    case _inventory_action_equip_from_bag: return QStringLiteral("equip_from_bag");
+    case _inventory_action_unequip_to_bag: return QStringLiteral("unequip_to_bag");
+    case _inventory_action_move_equipment: return QStringLiteral("move_equipment");
+    case _inventory_action_move_bag_to_warehouse: return QStringLiteral("move_bag_to_warehouse");
+    case _inventory_action_move_warehouse_to_bag: return QStringLiteral("move_warehouse_to_bag");
+    default: return QStringLiteral("unknown");
+    }
+}
+
+QString inventoryActionJournalPayload(const STRU_INVENTORY_ACTION_RS& rs)
+{
+    QJsonObject root;
+    root.insert(QStringLiteral("playerId"), rs.playerId);
+    root.insert(QStringLiteral("action"), inventoryActionName(rs.action));
+    root.insert(QStringLiteral("actionCode"), static_cast<int>(rs.action));
+    root.insert(QStringLiteral("actionArg"), static_cast<int>(rs.actionArg));
+    root.insert(QStringLiteral("requestItemId"), rs.requestItemId);
+    root.insert(QStringLiteral("requestItemCount"), rs.requestItemCount);
+    root.insert(QStringLiteral("requestSlotIndex"), rs.requestSlotIndex);
+    root.insert(QStringLiteral("result"), rs.result);
+    root.insert(QStringLiteral("stateVersion"), static_cast<int>(rs.stateVersion));
+    root.insert(QStringLiteral("warehouseUnlockTier"), rs.warehouseUnlockTier);
+    root.insert(QStringLiteral("level"), rs.level);
+    root.insert(QStringLiteral("experience"), static_cast<qint64>(rs.experience));
+    root.insert(QStringLiteral("health"), rs.health);
+    root.insert(QStringLiteral("mana"), rs.mana);
+    root.insert(QStringLiteral("message"), QString::fromUtf8(rs.message).trimmed());
+
+    QJsonArray bagDeltaArray;
+    for (int i = 0; i < qBound(0, static_cast<int>(rs.bagDeltaCount), MAX_BAG_ITEM_NUM); ++i) {
+        QJsonObject deltaObject;
+        deltaObject.insert(QStringLiteral("itemId"), rs.bagDeltas[i].itemId);
+        deltaObject.insert(QStringLiteral("delta"), rs.bagDeltas[i].delta);
+        bagDeltaArray.append(deltaObject);
+    }
+    root.insert(QStringLiteral("bagDeltas"), bagDeltaArray);
+
+    QJsonArray warehouseDeltaArray;
+    for (int i = 0; i < qBound(0, static_cast<int>(rs.warehouseDeltaCount), MAX_WAREHOUSE_ITEM_NUM); ++i) {
+        QJsonObject deltaObject;
+        deltaObject.insert(QStringLiteral("itemId"), rs.warehouseDeltas[i].itemId);
+        deltaObject.insert(QStringLiteral("delta"), rs.warehouseDeltas[i].delta);
+        warehouseDeltaArray.append(deltaObject);
+    }
+    root.insert(QStringLiteral("warehouseDeltas"), warehouseDeltaArray);
+
+    QJsonArray equipmentArray;
+    for (int i = 0; i < qBound(0, static_cast<int>(rs.equipmentChangeCount), MAX_EQUIPMENT_SLOT_NUM); ++i) {
+        const InventoryEquipmentChangeEntry& entry = rs.equipmentChanges[i];
+        QJsonObject equipmentObject;
+        equipmentObject.insert(QStringLiteral("slotIndex"), entry.slotIndex);
+        equipmentObject.insert(QStringLiteral("itemId"), entry.itemId);
+        equipmentObject.insert(QStringLiteral("enhanceLevel"), entry.enhanceLevel);
+        equipmentObject.insert(QStringLiteral("forgeLevel"), entry.forgeLevel);
+        equipmentObject.insert(QStringLiteral("enchantKind"), entry.enchantKind);
+        equipmentObject.insert(QStringLiteral("enchantValue"), entry.enchantValue);
+        equipmentObject.insert(QStringLiteral("enhanceSuccessCount"), entry.enhanceSuccessCount);
+        equipmentObject.insert(QStringLiteral("forgeSuccessCount"), entry.forgeSuccessCount);
+        equipmentObject.insert(QStringLiteral("enchantSuccessCount"), entry.enchantSuccessCount);
+        equipmentArray.append(equipmentObject);
+    }
+    root.insert(QStringLiteral("equipmentChanges"), equipmentArray);
+
+    return QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact));
+}
+
+void fillInventoryActionDeltaResponse(STRU_INVENTORY_ACTION_RS& rs,
+                                      const Player_Information& previousInfo,
+                                      const Player_Information& currentInfo,
+                                      const STRU_INVENTORY_ACTION_RQ& rq,
+                                      int result,
+                                      const QString& message,
+                                      quint16 responseFlags)
 {
     memset(&rs, 0, sizeof(rs));
-    rs.playerId = playerInfo.player_UserId;
-    rs.level = playerInfo.level;
-    rs.experience = playerInfo.exp;
-    rs.health = playerInfo.health;
-    rs.mana = playerInfo.mana;
-    rs.warehouseUnlockTier = qBound(1, playerInfo.warehouseUnlockTier, serverWarehouseTierCount());
+    rs.playerId = currentInfo.player_UserId;
+    rs.action = rq.action;
+    rs.actionArg = rq.actionArg;
+    rs.result = result;
+    rs.stateVersion = currentInfo.inventoryStateVersion;
+    rs.requestItemId = rq.itemId;
+    rs.requestItemCount = rq.itemCount;
+    rs.requestSlotIndex = rq.slotIndex;
+    rs.level = currentInfo.level;
+    rs.experience = currentInfo.exp;
+    rs.health = currentInfo.health;
+    rs.mana = currentInfo.mana;
+    rs.warehouseUnlockTier = qBound(1, currentInfo.warehouseUnlockTier, serverWarehouseTierCount());
+    rs.responseFlags = responseFlags;
+    rs.bagDeltaCount = static_cast<quint16>(fillInventoryDeltaEntries(rs.bagDeltas,
+                                                                      MAX_BAG_ITEM_NUM,
+                                                                      previousInfo.bagEntries,
+                                                                      currentInfo.bagEntries));
+    rs.warehouseDeltaCount = static_cast<quint16>(fillInventoryDeltaEntries(rs.warehouseDeltas,
+                                                                            MAX_WAREHOUSE_ITEM_NUM,
+                                                                            previousInfo.warehouseEntries,
+                                                                            currentInfo.warehouseEntries));
+    rs.equipmentChangeCount = static_cast<quint16>(fillEquipmentChangeEntries(rs.equipmentChanges,
+                                                                              MAX_EQUIPMENT_SLOT_NUM,
+                                                                              previousInfo,
+                                                                              currentInfo));
+    std::strncpy(rs.message, message.toUtf8().constData(), sizeof(rs.message) - 1);
+}
 
-    const QVector<QPair<int, int>> bagEntries = normalizedPersistEntries(playerInfo.bagEntries);
-    rs.bagItemAmount = qMin(static_cast<int>(bagEntries.size()), MAX_BAG_ITEM_NUM);
-    for (int i = 0; i < rs.bagItemAmount; ++i) {
-        rs.bagItems[i][0] = bagEntries[i].first;
-        rs.bagItems[i][1] = bagEntries[i].second;
-    }
-
-    const QVector<QPair<int, int>> warehouseEntries = normalizedPersistEntries(playerInfo.warehouseEntries);
-    rs.warehouseItemAmount = qMin(static_cast<int>(warehouseEntries.size()), MAX_WAREHOUSE_ITEM_NUM);
-    for (int i = 0; i < rs.warehouseItemAmount; ++i) {
-        rs.warehouseItems[i][0] = warehouseEntries[i].first;
-        rs.warehouseItems[i][1] = warehouseEntries[i].second;
-    }
-
-    for (int slotIndex = 0; slotIndex < MAX_EQUIPMENT_SLOT_NUM; ++slotIndex) {
-        rs.equippedItemIds[slotIndex] = playerInfo.equippedItemIds[slotIndex];
-        rs.equippedEnhanceLevels[slotIndex] = playerInfo.equippedEnhanceLevels[slotIndex];
-        rs.equippedForgeLevels[slotIndex] = playerInfo.equippedForgeLevels[slotIndex];
-        rs.equippedEnchantKinds[slotIndex] = playerInfo.equippedEnchantKinds[slotIndex];
-        rs.equippedEnchantValues[slotIndex] = playerInfo.equippedEnchantValues[slotIndex];
-        rs.equippedEnhanceSuccessCounts[slotIndex] = playerInfo.equippedEnhanceSuccessCounts[slotIndex];
-        rs.equippedForgeSuccessCounts[slotIndex] = playerInfo.equippedForgeSuccessCounts[slotIndex];
-        rs.equippedEnchantSuccessCounts[slotIndex] = playerInfo.equippedEnchantSuccessCounts[slotIndex];
-    }
+[[maybe_unused]] bool appendInventoryJournalEntry(CMySql& sql,
+                                                  int userId,
+                                                  quint32 stateVersion,
+                                                  const QString& action,
+                                                  const QString& payloadJson)
+{
+    return updatePreparedQuery(
+        sql,
+        "INSERT INTO user_inventory_journal (u_id, state_version, action_key, payload_json) "
+        "VALUES (?, ?, ?, ?);",
+        sqlParams(userId,
+                  static_cast<int>(stateVersion),
+                  utf8StdString(action),
+                  utf8StdString(payloadJson)));
 }
 
 QString readObjectProperty(XMLElement* objectElement, const QString& propertyName)
@@ -1187,24 +2070,10 @@ int applyServerMonsterRewardProgression(Player_Information& playerInfo,
  * @author Jaeger
  * @date 2025.3.28
  */
-QVector<QPair<int, int>> bagEntriesFromSaveRequest(const STRU_SAVE_RQ* rq)
+[[maybe_unused]] QVector<QPair<int, int>> bagEntriesFromSaveRequest(const STRU_SAVE_RQ* rq)
 {
-    QVector<QPair<int, int>> entries;
-    if (!rq) {
-        return entries;
-    }
-
-    const int safeCount = qBound(0, rq->bagItemAmount, MAX_BAG_ITEM_NUM);
-    entries.reserve(safeCount);
-    for (int i = 0; i < safeCount; ++i) {
-        const int itemId = rq->bagItems[i][0];
-        const int itemCount = rq->bagItems[i][1];
-        if (itemId <= 0 || itemCount <= 0) {
-            continue;
-        }
-        entries.push_back(qMakePair(itemId, itemCount));
-    }
-    return entries;
+    Q_UNUSED(rq);
+    return {};
 }
 
 /**
@@ -1212,24 +2081,10 @@ QVector<QPair<int, int>> bagEntriesFromSaveRequest(const STRU_SAVE_RQ* rq)
  * @author Jaeger
  * @date 2025.3.28
  */
-QVector<QPair<int, int>> warehouseEntriesFromSaveRequest(const STRU_SAVE_RQ* rq)
+[[maybe_unused]] QVector<QPair<int, int>> warehouseEntriesFromSaveRequest(const STRU_SAVE_RQ* rq)
 {
-    QVector<QPair<int, int>> entries;
-    if (!rq) {
-        return entries;
-    }
-
-    const int safeCount = qBound(0, rq->warehouseItemAmount, MAX_WAREHOUSE_ITEM_NUM);
-    entries.reserve(safeCount);
-    for (int i = 0; i < safeCount; ++i) {
-        const int itemId = rq->warehouseItems[i][0];
-        const int itemCount = rq->warehouseItems[i][1];
-        if (itemId <= 0 || itemCount <= 0) {
-            continue;
-        }
-        entries.push_back(qMakePair(itemId, itemCount));
-    }
-    return entries;
+    Q_UNUSED(rq);
+    return {};
 }
 
 QVector<QPair<int, int>> normalizedPersistEntries(const QVector<QPair<int, int>>& rawEntries)
@@ -1261,16 +2116,10 @@ int warehouseSlotCapacityForTier(int tier)
                   MAX_WAREHOUSE_ITEM_NUM);
 }
 
-EquipmentIntArray requestedEquippedItemIdsFromSaveRequest(const STRU_SAVE_RQ* rq)
+[[maybe_unused]] EquipmentIntArray requestedEquippedItemIdsFromSaveRequest(const STRU_SAVE_RQ* rq)
 {
     EquipmentIntArray ids{};
-    if (!rq) {
-        return ids;
-    }
-
-    for (int slotIndex = 0; slotIndex < MAX_EQUIPMENT_SLOT_NUM; ++slotIndex) {
-        ids[slotIndex] = qMax(0, rq->equippedItemIds[slotIndex]);
-    }
+    Q_UNUSED(rq);
     return ids;
 }
 
@@ -1316,12 +2165,12 @@ QVector<QPair<int, int>> bagEntriesExcludingEquipped(const QVector<QPair<int, in
     return itemCountMapToEntries(counts);
 }
 
-bool inventoryCountsMatch(const QVector<QPair<int, int>>& authoritativeBagEntries,
-                          const QVector<QPair<int, int>>& authoritativeWarehouseEntries,
-                          const EquipmentIntArray& authoritativeEquippedItemIds,
-                          const QVector<QPair<int, int>>& requestedBagEntries,
-                          const QVector<QPair<int, int>>& requestedWarehouseEntries,
-                          const EquipmentIntArray& requestedEquippedItemIds)
+[[maybe_unused]] bool inventoryCountsMatch(const QVector<QPair<int, int>>& authoritativeBagEntries,
+                                           const QVector<QPair<int, int>>& authoritativeWarehouseEntries,
+                                           const EquipmentIntArray& authoritativeEquippedItemIds,
+                                           const QVector<QPair<int, int>>& requestedBagEntries,
+                                           const QVector<QPair<int, int>>& requestedWarehouseEntries,
+                                           const EquipmentIntArray& requestedEquippedItemIds)
 {
     ItemCountMap authoritativeCounts = buildItemCountMap(authoritativeBagEntries);
     ItemCountMap requestedCounts = buildItemCountMap(requestedBagEntries);
@@ -1352,7 +2201,7 @@ void clearTrackedEquipmentSlot(Player_Information& playerInfo, int slotIndex)
     playerInfo.equippedEnchantSuccessCounts[slotIndex] = 0;
 }
 
-void adoptRequestedEquipmentLayout(Player_Information& playerInfo, const EquipmentIntArray& requestedEquippedItemIds)
+[[maybe_unused]] void adoptRequestedEquipmentLayout(Player_Information& playerInfo, const EquipmentIntArray& requestedEquippedItemIds)
 {
     const EquipmentIntArray previousItemIds = playerInfo.equippedItemIds;
     const EquipmentIntArray previousEnhanceLevels = playerInfo.equippedEnhanceLevels;
@@ -1408,21 +2257,57 @@ bool persistItemTableEntries(CMySql& sql,
                              int userId,
                              const QVector<QPair<int, int>>& rawEntries)
 {
-    const QVector<QPair<int, int>> entries = normalizedPersistEntries(rawEntries);
-    const QString deleteQuery =
-        QStringLiteral("DELETE FROM %1 WHERE u_id = ?;").arg(tableName);
-    if (!updatePreparedQuery(sql, deleteQuery, sqlParams(userId))) {
+    const QVector<QPair<int, int>> nextEntries = normalizedPersistEntries(rawEntries);
+    std::list<std::string> storedRows;
+    const QString selectQuery =
+        QStringLiteral("SELECT item_id, item_count FROM %1 WHERE u_id = ?;").arg(tableName);
+    if (!selectPreparedQuery(sql, selectQuery, sqlParams(userId), 2, storedRows)) {
         return false;
+    }
+
+    ItemCountMap currentCounts;
+    while (storedRows.size() >= 2) {
+        const std::string itemIdText = storedRows.front();
+        storedRows.pop_front();
+        const std::string itemCountText = storedRows.front();
+        storedRows.pop_front();
+
+        try {
+            const int itemId = std::stoi(itemIdText);
+            const int itemCount = std::stoi(itemCountText);
+            if (itemId > 0 && itemCount > 0) {
+                currentCounts[itemId] = itemCount;
+            }
+        } catch (...) {
+        }
+    }
+
+    const ItemCountMap nextCounts = buildItemCountMap(nextEntries);
+
+    const QString deleteQuery =
+        QStringLiteral("DELETE FROM %1 WHERE u_id = ? AND item_id = ?;").arg(tableName);
+    for (auto it = currentCounts.constBegin(); it != currentCounts.constEnd(); ++it) {
+        if (nextCounts.contains(it.key())) {
+            continue;
+        }
+
+        if (!updatePreparedQuery(sql, deleteQuery, sqlParams(userId, it.key()))) {
+            return false;
+        }
     }
 
     const QString upsertQuery =
         QStringLiteral("INSERT INTO %1 (u_id, item_id, item_count) VALUES (?, ?, ?) "
                        "ON DUPLICATE KEY UPDATE item_count = VALUES(item_count);")
             .arg(tableName);
-    for (const auto& entry : entries) {
+    for (auto it = nextCounts.constBegin(); it != nextCounts.constEnd(); ++it) {
+        if (currentCounts.value(it.key(), 0) == it.value()) {
+            continue;
+        }
+
         if (!updatePreparedQuery(sql,
                                  upsertQuery,
-                                 sqlParams(userId, entry.first, entry.second))) {
+                                 sqlParams(userId, it.key(), it.value()))) {
             return false;
         }
     }
@@ -1532,7 +2417,7 @@ bool persistAuthoritativeRewardState(CMySql& sql, const Player_Information& play
                                    playerInfo.bagEntries);
 }
 
-bool persistAuthoritativeRewardState(const Player_Information& playerInfo)
+[[maybe_unused]] bool persistAuthoritativeRewardState(const Player_Information& playerInfo)
 {
     CMySql sql;
     if (!sql.BeginTransaction()) {
@@ -1870,6 +2755,10 @@ core::core(QObject* parent)
     m_dungeonTickTimer->setInterval(120);
     connect(m_dungeonTickTimer, &QTimer::timeout, this, &core::tickDungeonRooms);
 
+    m_inventoryPersistTimer = new QTimer(this);
+    m_inventoryPersistTimer->setSingleShot(true);
+    connect(m_inventoryPersistTimer, &QTimer::timeout, this, &core::processInventoryPersistenceQueue);
+
 }
 
 /**
@@ -1935,6 +2824,7 @@ bool core::open() {
     if (dbOk) {dbOk = ensureEquipmentStateTable();}
     if (dbOk) {dbOk = ensureProgressStateTable();}
     if (dbOk) {dbOk = ensureWarehouseStateTable();}
+    if (dbOk) {dbOk = ensureInventoryJournalTable();}
 
     out << (dbOk ? GREEN "OK" RESET : RED "FAILED" RESET) << "\n";
 
@@ -1955,6 +2845,7 @@ bool core::open() {
         if (m_dungeonTickTimer && !m_dungeonTickTimer->isActive()) {
             m_dungeonTickTimer->start();
         }
+        loadPendingInventoryPersistenceJobs();
         out << GREEN "All modules initialized successfully!" RESET << "\n";
         return true;
     } else {
@@ -2688,9 +3579,12 @@ void core::upsertTrackedPlayer(quint64 clientId,
                          x,
                          y,
                          clientId,
-                         normalizedMapId,
-                         normalizedInstanceId,
-                         dir);
+                             normalizedMapId,
+                             normalizedInstanceId,
+                             dir);
+    if (!players.empty()) {
+        primeTrackedPlayerInventoryVersion(players.back());
+    }
 }
 
 /**
@@ -3456,21 +4350,46 @@ void core::settleDungeonRoom(DungeonRoomState& room)
             continue;
         }
 
+        const Player_Information previousSettlementState = *trackedPlayer;
+        Player_Information updatedSettlementState = previousSettlementState;
         bool leveledUp = false;
-        applyServerExperienceReward(*trackedPlayer, completionExpReward, &leveledUp);
+        applyServerExperienceReward(updatedSettlementState, completionExpReward, &leveledUp);
         const QVector<QPair<int, int>> plannedDrops =
             serverGenerateDungeonSettlementDrops(room.mapId,
                                                  recommendedLevel,
                                                  room.totalMonsterCount,
                                                  memberCount);
         const QVector<QPair<int, int>> acceptedDrops =
-            applyDropsToTrackedBag(*trackedPlayer,
+            applyDropsToTrackedBag(updatedSettlementState,
                                    plannedDrops,
                                    QDateTime::currentMSecsSinceEpoch());
-        if (!persistAuthoritativeRewardState(*trackedPlayer)) {
-            qWarning() << "Failed to persist dungeon settlement for player"
-                       << trackedPlayer->player_UserId;
+        updatedSettlementState.inventoryStateVersion =
+            previousSettlementState.inventoryStateVersion + 1;
+
+        QJsonObject settlementEvent;
+        settlementEvent.insert(QStringLiteral("type"), QStringLiteral("dungeon_settlement"));
+        settlementEvent.insert(QStringLiteral("mapId"), room.mapId);
+        settlementEvent.insert(QStringLiteral("instanceId"), QString::number(room.instanceId));
+        settlementEvent.insert(QStringLiteral("recommendedLevel"), recommendedLevel);
+        settlementEvent.insert(QStringLiteral("completionExpReward"), completionExpReward);
+        settlementEvent.insert(QStringLiteral("memberCount"), memberCount);
+        settlementEvent.insert(QStringLiteral("leveledUp"), leveledUp);
+        settlementEvent.insert(QStringLiteral("drops"),
+                               inventoryJournalItemEntriesToJson(acceptedDrops));
+        QString stageError;
+        if (!stageInventoryPersistence(updatedSettlementState,
+                                       QStringLiteral("dungeon_settlement"),
+                                       QString::fromUtf8(
+                                           QJsonDocument(settlementEvent).toJson(QJsonDocument::Compact)),
+                                       &stageError))
+        {
+            qWarning() << "Failed to stage dungeon settlement persistence:"
+                       << trackedPlayer->player_UserId
+                       << stageError;
+            continue;
         }
+
+        *trackedPlayer = updatedSettlementState;
 
         STRU_DUNGEON_SETTLEMENT_RS rs{};
         rs.recipientPlayerId = trackedPlayer->player_UserId;
@@ -4020,6 +4939,353 @@ bool core::ensureWarehouseStateTable()
     return sql.UpdateMySql(createSql);
 }
 
+bool core::ensureInventoryJournalTable()
+{
+    CMySql sql;
+    const char* createSql =
+        "CREATE TABLE IF NOT EXISTS user_inventory_journal ("
+        "journal_id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+        "u_id INT NOT NULL, "
+        "state_version INT NOT NULL DEFAULT 0, "
+        "action_key VARCHAR(64) NOT NULL, "
+        "payload_json LONGTEXT NOT NULL, "
+        "status VARCHAR(16) NOT NULL DEFAULT 'pending', "
+        "attempt_count INT NOT NULL DEFAULT 0, "
+        "last_error VARCHAR(255) NULL, "
+        "applied_at TIMESTAMP NULL DEFAULT NULL, "
+        "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        ");";
+    if (!sql.UpdateMySql(createSql)) {
+        return false;
+    }
+
+    if (!ensureSchemaColumnExists(sql,
+                                  QStringLiteral("user_inventory_journal"),
+                                  QStringLiteral("status"),
+                                  QStringLiteral("VARCHAR(16) NOT NULL DEFAULT 'applied'"))) {
+        return false;
+    }
+    if (!ensureSchemaColumnExists(sql,
+                                  QStringLiteral("user_inventory_journal"),
+                                  QStringLiteral("attempt_count"),
+                                  QStringLiteral("INT NOT NULL DEFAULT 0"))) {
+        return false;
+    }
+    if (!ensureSchemaColumnExists(sql,
+                                  QStringLiteral("user_inventory_journal"),
+                                  QStringLiteral("last_error"),
+                                  QStringLiteral("VARCHAR(255) NULL"))) {
+        return false;
+    }
+    if (!ensureSchemaColumnExists(sql,
+                                  QStringLiteral("user_inventory_journal"),
+                                  QStringLiteral("applied_at"),
+                                  QStringLiteral("TIMESTAMP NULL DEFAULT NULL"))) {
+        return false;
+    }
+    if (!ensureSchemaIndexExists(sql,
+                                 QStringLiteral("user_inventory_journal"),
+                                 QStringLiteral("idx_inventory_journal_status"),
+                                 QStringLiteral("INDEX idx_inventory_journal_status (status, created_at)"))) {
+        return false;
+    }
+    updateQuery(sql,
+                QStringLiteral("UPDATE user_inventory_journal "
+                               "SET applied_at = created_at "
+                               "WHERE status = 'applied' AND applied_at IS NULL;"));
+    return true;
+}
+
+InventoryJournalVersionState core::loadInventoryJournalVersionState(int playerId) const
+{
+    InventoryJournalVersionState versionState;
+    if (playerId <= 0) {
+        return versionState;
+    }
+
+    CMySql sql;
+    std::list<std::string> result;
+    if (selectPreparedQuery(sql,
+                            "SELECT IFNULL(MAX(state_version), 0), "
+                            "IFNULL(MAX(CASE WHEN status = 'applied' THEN state_version ELSE 0 END), 0) "
+                            "FROM user_inventory_journal WHERE u_id = ?;",
+                            sqlParams(playerId),
+                            2,
+                            result)
+        && result.size() >= 2)
+    {
+        try {
+            versionState.latestKnownVersion =
+                static_cast<quint32>(qMax(0, std::stoi(result.front())));
+        } catch (...) {
+            versionState.latestKnownVersion = 0;
+        }
+        result.pop_front();
+        try {
+            versionState.latestAppliedVersion =
+                static_cast<quint32>(qMax(0, std::stoi(result.front())));
+        } catch (...) {
+            versionState.latestAppliedVersion = versionState.latestKnownVersion;
+        }
+    }
+
+    versionState.latestAppliedVersion =
+        qMin(versionState.latestAppliedVersion, versionState.latestKnownVersion);
+    return versionState;
+}
+
+void core::primeTrackedPlayerInventoryVersion(Player_Information& playerInfo)
+{
+    const InventoryJournalVersionState versionState =
+        loadInventoryJournalVersionState(playerInfo.player_UserId);
+    playerInfo.inventoryStateVersion = versionState.latestKnownVersion;
+    playerInfo.lastPersistedInventoryStateVersion = versionState.latestAppliedVersion;
+}
+
+bool core::stageInventoryPersistence(const Player_Information& playerInfo,
+                                     const QString& action,
+                                     const QString& eventPayloadJson,
+                                     QString* errorMessage)
+{
+    if (playerInfo.player_UserId <= 0) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("无效的角色编号，无法写入持久化队列。");
+        }
+        return false;
+    }
+
+    const QString snapshotPayload =
+        buildInventorySnapshotJournalPayload(playerInfo, action, eventPayloadJson);
+    CMySql sql;
+    quint64 journalId = 0;
+    if (!appendPendingInventoryJournalEntry(sql,
+                                            playerInfo.player_UserId,
+                                            playerInfo.inventoryStateVersion,
+                                            action,
+                                            snapshotPayload,
+                                            &journalId))
+    {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("库存 journal 落地失败，已拒绝本次状态变更。");
+        }
+        return false;
+    }
+
+    enqueueInventoryPersistence(playerInfo, action, snapshotPayload, journalId);
+    return true;
+}
+
+void core::enqueueInventoryPersistence(const Player_Information& playerInfo,
+                                       const QString& action,
+                                       const QString& payloadJson,
+                                       quint64 journalId)
+{
+    if (playerInfo.player_UserId <= 0) {
+        return;
+    }
+
+    InventoryPersistenceJob job;
+    job.journalId = journalId;
+    job.playerId = playerInfo.player_UserId;
+    job.version = playerInfo.inventoryStateVersion;
+    job.action = action;
+    job.payloadJson = payloadJson;
+    job.snapshot = std::make_shared<Player_Information>(playerInfo);
+    m_inventoryPersistQueues[job.playerId].push_back(job);
+
+    if (m_inventoryPersistTimer && !m_inventoryPersistTimer->isActive()) {
+        m_inventoryPersistTimer->start(0);
+    }
+}
+
+void core::loadPendingInventoryPersistenceJobs()
+{
+    if (!ensureInventoryJournalTable()) {
+        return;
+    }
+
+    CMySql sql;
+    std::list<std::string> rows;
+    if (!selectPreparedQuery(sql,
+                             "SELECT journal_id, u_id, state_version, action_key, payload_json, attempt_count "
+                             "FROM user_inventory_journal "
+                             "WHERE status = ? "
+                             "ORDER BY u_id ASC, state_version ASC, journal_id ASC;",
+                             sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusPending))),
+                             6,
+                             rows))
+    {
+        qWarning() << "Failed to load pending inventory journal rows during startup.";
+        return;
+    }
+
+    while (rows.size() >= 6) {
+        quint64 journalId = 0;
+        int playerId = 0;
+        quint32 version = 0;
+        QString action;
+        QString payloadJson;
+        int attempt = 0;
+
+        try {
+            journalId = static_cast<quint64>(std::stoull(rows.front()));
+        } catch (...) {
+            journalId = 0;
+        }
+        rows.pop_front();
+
+        try {
+            playerId = std::stoi(rows.front());
+        } catch (...) {
+            playerId = 0;
+        }
+        rows.pop_front();
+
+        try {
+            version = static_cast<quint32>(qMax(0, std::stoi(rows.front())));
+        } catch (...) {
+            version = 0;
+        }
+        rows.pop_front();
+
+        action = QString::fromStdString(rows.front()).trimmed();
+        rows.pop_front();
+
+        payloadJson = QString::fromStdString(rows.front());
+        rows.pop_front();
+
+        try {
+            attempt = qMax(0, std::stoi(rows.front()));
+        } catch (...) {
+            attempt = 0;
+        }
+        rows.pop_front();
+
+        Player_Information snapshot(0, QString(), 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+        if (!parseInventorySnapshotJournalPayload(payloadJson, &snapshot, &action)) {
+            qWarning() << "Discarding unreadable pending inventory journal payload:"
+                       << journalId << playerId << version;
+            markInventoryJournalFailed(journalId, attempt + 1, QStringLiteral("invalid snapshot payload"));
+            continue;
+        }
+
+        InventoryPersistenceJob job;
+        job.journalId = journalId;
+        job.playerId = snapshot.player_UserId;
+        job.version = snapshot.inventoryStateVersion > 0
+                          ? snapshot.inventoryStateVersion
+                          : version;
+        job.action = action;
+        job.payloadJson = payloadJson;
+        job.snapshot = std::make_shared<Player_Information>(snapshot);
+        job.attempt = attempt;
+        m_inventoryPersistQueues[job.playerId].push_back(job);
+    }
+
+    if (m_inventoryPersistTimer && !m_inventoryPersistQueues.isEmpty() && !m_inventoryPersistTimer->isActive()) {
+        m_inventoryPersistTimer->start(0);
+    }
+}
+
+int core::nextInventoryPersistencePlayerId()
+{
+    QList<int> playerIds = m_inventoryPersistQueues.keys();
+    std::sort(playerIds.begin(), playerIds.end());
+    if (playerIds.isEmpty()) {
+        return 0;
+    }
+
+    int startIndex = 0;
+    const int lastIndex = playerIds.indexOf(m_lastInventoryPersistPlayerId);
+    if (lastIndex >= 0) {
+        startIndex = (lastIndex + 1) % playerIds.size();
+    }
+
+    for (int offset = 0; offset < playerIds.size(); ++offset) {
+        const int playerId = playerIds[(startIndex + offset) % playerIds.size()];
+        if (m_inventoryPersistQueues.value(playerId).isEmpty()) {
+            continue;
+        }
+        m_lastInventoryPersistPlayerId = playerId;
+        return playerId;
+    }
+    return 0;
+}
+
+void core::processInventoryPersistenceQueue()
+{
+    const int playerId = nextInventoryPersistencePlayerId();
+    if (playerId <= 0) {
+        return;
+    }
+
+    auto queueIt = m_inventoryPersistQueues.find(playerId);
+    if (queueIt == m_inventoryPersistQueues.end() || queueIt->isEmpty()) {
+        m_inventoryPersistQueues.remove(playerId);
+        if (m_inventoryPersistTimer && !m_inventoryPersistQueues.isEmpty()) {
+            m_inventoryPersistTimer->start(0);
+        }
+        return;
+    }
+
+    if (queueIt->size() > 1) {
+        const InventoryPersistenceJob latestJob = queueIt->last();
+        for (int index = 0; index < queueIt->size() - 1; ++index) {
+            const InventoryPersistenceJob& supersededJob = queueIt->at(index);
+            if (supersededJob.journalId > 0) {
+                CMySql markSql;
+                if (!markInventoryJournalSuperseded(markSql, supersededJob.journalId)) {
+                    qWarning() << "Failed to mark superseded inventory journal row:"
+                               << supersededJob.journalId << supersededJob.playerId << supersededJob.version;
+                }
+            }
+        }
+        queueIt->clear();
+        queueIt->push_back(latestJob);
+    }
+
+    InventoryPersistenceJob& job = queueIt->first();
+    job.attempt += 1;
+
+    bool savedOk = false;
+    QString failureReason = QStringLiteral("inventory persistence transaction failed");
+    CMySql sql;
+    if (!job.snapshot) {
+        failureReason = QStringLiteral("missing snapshot for persistence job");
+    } else if (job.journalId == 0) {
+        failureReason = QStringLiteral("missing journal id for persistence job");
+    } else if (!sql.BeginTransaction()) {
+        failureReason = QStringLiteral("begin transaction failed");
+    } else {
+        savedOk = persistTrackedPlayerInventoryState(sql, *job.snapshot)
+                  && markInventoryJournalApplied(sql, job.journalId, job.attempt)
+                  && sql.CommitTransaction();
+        if (!savedOk) {
+            sql.RollbackTransaction();
+        }
+    }
+
+    if (savedOk) {
+        if (Player_Information* trackedPlayer = findTrackedPlayer(job.playerId)) {
+            trackedPlayer->lastPersistedInventoryStateVersion =
+                qMax(trackedPlayer->lastPersistedInventoryStateVersion, job.version);
+        }
+        queueIt->removeFirst();
+    } else {
+        markInventoryJournalRetryPending(job.journalId, job.attempt, failureReason);
+        qWarning() << "Inventory persistence retry scheduled for player"
+                   << job.playerId << "version" << job.version << "attempt" << job.attempt;
+    }
+
+    if (queueIt->isEmpty()) {
+        m_inventoryPersistQueues.erase(queueIt);
+    }
+
+    if (m_inventoryPersistTimer && !m_inventoryPersistQueues.isEmpty()) {
+        m_inventoryPersistTimer->start(savedOk ? 0 : inventoryPersistenceRetryDelayMs(job.attempt));
+    }
+}
+
 /**
  * @brief 关闭close相关逻辑
  * @author Jaeger
@@ -4029,6 +5295,9 @@ void core::close(){
     //JaegerDebug();
     if (m_dungeonTickTimer) {
         m_dungeonTickTimer->stop();
+    }
+    if (m_inventoryPersistTimer) {
+        m_inventoryPersistTimer->stop();
     }
     if (m_pTCPNet)
     {
@@ -4677,6 +5946,7 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
         trackedPlayer->positionX = initialize_rs.x;
         trackedPlayer->positionY = initialize_rs.y;
         trackedPlayer->direction = s;
+        primeTrackedPlayerInventoryVersion(*trackedPlayer);
     } else {
         players.emplace_back(boundPlayerId,
                              initializedPlayerName,
@@ -4707,6 +5977,9 @@ void core::Initialize_Request(quint64 clientId, STRU_INITIALIZE_RQ* rq)
                              initializedMapId,
                              qMax<qint64>(0, initialize_rs.instanceId),
                              s);
+        if (!players.empty()) {
+            primeTrackedPlayerInventoryVersion(players.back());
+        }
     }
 
     initialize_rs.Initialize_Result = _initialize_success;
@@ -5442,10 +6715,6 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
         return;
     }
 
-    ensureEquipmentColumns();
-    ensureEquipmentStateTable();
-    ensureProgressStateTable();
-    ensureWarehouseStateTable();
     STRU_SAVE_RS sss;
     CMySql sql;
     sss.Save_Result = _save_fail_;
@@ -5457,24 +6726,13 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
         emit sendToClient(clientId, packet);
         return;
     }
-    const int normalizedLevel = CombatBalance::clampLevel(rq->level);
-    const CombatBalance::PlayerStats baseline = CombatBalance::playerStats(normalizedLevel);
-    int normalizedHealth = qBound(0, rq->health, baseline.maxHealth);
-    int normalizedMana = qBound(0, rq->mana, baseline.maxMana);
-    const int normalizedAttackRange = qBound(20, rq->attackRange, 160);
-    const long long normalizedExperience = qMax(0LL, rq->experience);
-    const QVector<QPair<int, int>> requestedBagEntries = bagEntriesFromSaveRequest(rq);
-    const QVector<QPair<int, int>> requestedWarehouseEntries = warehouseEntriesFromSaveRequest(rq);
-    const EquipmentIntArray requestedEquippedItemIds = requestedEquippedItemIdsFromSaveRequest(rq);
-    const int normalizedWarehouseUnlockTier = qBound(1, rq->warehouseUnlockTier, 4);
     QString normalizedMapId = QString::fromUtf8(rq->mapId).trimmed();
     if (normalizedMapId.isEmpty()) {
         normalizedMapId = QStringLiteral("BornWorld");
     }
     const qint64 normalizedInstanceId =
         resolveAuthoritativeInstanceIdForPlayerMap(boundPlayerId, normalizedMapId, rq->instanceId);
-    const Player_Information* existingTrackedPlayer = findTrackedPlayer(boundPlayerId);
-    if (!existingTrackedPlayer) {
+    if (!findTrackedPlayer(boundPlayerId)) {
         upsertTrackedPlayer(clientId,
                             boundPlayerId,
                             QString(),
@@ -5484,99 +6742,13 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
                             rq->y,
                             3);
     }
-    QVector<QPair<int, int>> persistedBagEntries = normalizedPersistEntries(requestedBagEntries);
-    QVector<QPair<int, int>> persistedWarehouseEntries = normalizedPersistEntries(requestedWarehouseEntries);
-    EquipmentIntArray persistedEquippedItemIds = requestedEquippedItemIds;
-    int persistedWarehouseUnlockTier = normalizedWarehouseUnlockTier;
     Player_Information* trackedPlayer = findTrackedPlayer(boundPlayerId);
-    bool inventoryRejected = false;
     if (trackedPlayer) {
         trackedPlayer->clientId = clientId;
-        trackedPlayer->level = normalizedLevel;
-        trackedPlayer->exp = normalizedExperience;
-        trackedPlayer->health = normalizedHealth;
-        trackedPlayer->mana = normalizedMana;
-        trackedPlayer->attackPower = baseline.attack;
-        trackedPlayer->magicAttack = baseline.magicAttack;
-        trackedPlayer->independentAttack = baseline.independentAttack;
-        trackedPlayer->defense = baseline.defence;
-        trackedPlayer->magicDefense = baseline.magicDefence;
-        trackedPlayer->strength = baseline.strength;
-        trackedPlayer->intelligence = baseline.intelligence;
-        trackedPlayer->vitality = baseline.vitality;
-        trackedPlayer->spirit = baseline.spirit;
-        trackedPlayer->critRate = baseline.critRate;
-        trackedPlayer->magicCritRate = baseline.magicCritRate;
-        trackedPlayer->critDamage = baseline.critDamage;
-        trackedPlayer->attackSpeed = baseline.attackSpeed;
-        trackedPlayer->moveSpeed = baseline.moveSpeed;
-        trackedPlayer->castSpeed = baseline.castSpeed;
-        trackedPlayer->attackRange = normalizedAttackRange;
-        const bool saveScopeMatchesRuntime =
-            trackedPlayer->mapId.compare(normalizedMapId, Qt::CaseInsensitive) == 0
-            && trackedPlayer->instanceId == normalizedInstanceId;
-        if (saveScopeMatchesRuntime) {
-            trackedPlayer->positionX = rq->x;
-            trackedPlayer->positionY = rq->y;
-        }
-
-        const bool hasAuthoritativeInventoryState = trackedPlayer->bagLoaded && trackedPlayer->warehouseLoaded;
-        const bool warehouseWithinUnlockedCapacity =
-            requestedWarehouseEntries.size() <= warehouseSlotCapacityForTier(trackedPlayer->warehouseUnlockTier);
-        const bool acceptedInventoryLayout =
-            hasAuthoritativeInventoryState
-            && warehouseWithinUnlockedCapacity
-            && inventoryCountsMatch(trackedPlayer->bagEntries,
-                                    trackedPlayer->warehouseEntries,
-                                    trackedPlayer->equippedItemIds,
-                                    requestedBagEntries,
-                                    requestedWarehouseEntries,
-                                    requestedEquippedItemIds);
-
-        if (acceptedInventoryLayout) {
-            trackedPlayer->bagEntries = normalizedPersistEntries(requestedBagEntries);
-            trackedPlayer->warehouseEntries = normalizedPersistEntries(requestedWarehouseEntries);
-            trackedPlayer->bagLoaded = true;
-            trackedPlayer->warehouseLoaded = true;
-            trackedPlayer->authoritativeBagUpdatedAtMs = 0;
-            adoptRequestedEquipmentLayout(*trackedPlayer, requestedEquippedItemIds);
-        } else if (!hasAuthoritativeInventoryState) {
-            trackedPlayer->bagEntries = normalizedPersistEntries(requestedBagEntries);
-            trackedPlayer->warehouseEntries = normalizedPersistEntries(requestedWarehouseEntries);
-            trackedPlayer->bagLoaded = true;
-            trackedPlayer->warehouseLoaded = true;
-            trackedPlayer->warehouseUnlockTier = qBound(1, normalizedWarehouseUnlockTier, 4);
-            trackedPlayer->authoritativeBagUpdatedAtMs = 0;
-            adoptRequestedEquipmentLayout(*trackedPlayer, requestedEquippedItemIds);
-        } else {
-            inventoryRejected = true;
-            qWarning() << "Rejected client inventory mutation for player" << boundPlayerId
-                       << "because it does not match authoritative server state.";
-        }
-
-        persistedBagEntries = trackedPlayer->bagLoaded
-                                  ? normalizedPersistEntries(trackedPlayer->bagEntries)
-                                  : normalizedPersistEntries(requestedBagEntries);
-        persistedWarehouseEntries = trackedPlayer->warehouseLoaded
-                                        ? normalizedPersistEntries(trackedPlayer->warehouseEntries)
-                                        : normalizedPersistEntries(requestedWarehouseEntries);
-        persistedEquippedItemIds = trackedPlayer->equippedItemIds;
-        persistedWarehouseUnlockTier = qMax(1, trackedPlayer->warehouseUnlockTier);
-        normalizedHealth = qBound(0,
-                                  rq->health,
-                                  baseline.maxHealth + serverEquipmentMaxHealthBonus(*trackedPlayer));
-        normalizedMana = qBound(0,
-                                rq->mana,
-                                baseline.maxMana + serverEquipmentMaxManaBonus(*trackedPlayer));
-        trackedPlayer->health = normalizedHealth;
-        trackedPlayer->mana = normalizedMana;
-    }
-
-    if (inventoryRejected) {
-        sss.Save_Result = _save_error_;
-        const QByteArray packet = PacketBuilder::build(_default_protocol_save_rs, sss);
-        emit sendToClient(clientId, packet);
-        return;
+        trackedPlayer->mapId = normalizedMapId;
+        trackedPlayer->instanceId = normalizedInstanceId;
+        trackedPlayer->positionX = rq->x;
+        trackedPlayer->positionY = rq->y;
     }
 
     if (!sql.BeginTransaction()) {
@@ -5584,62 +6756,15 @@ void core::Save_Request(quint64 clientId, STRU_SAVE_RQ* rq){
         emit sendToClient(clientId, packet);
         return;
     }
-    bool savedOk = updateUserBasicInformation(sql,
-                                              boundPlayerId,
-                                              normalizedHealth,
-                                              normalizedMana,
-                                              baseline.attack,
-                                              baseline.magicAttack,
-                                              baseline.independentAttack,
-                                              normalizedAttackRange,
-                                              static_cast<qlonglong>(normalizedExperience),
-                                              normalizedLevel,
-                                              baseline.defence,
-                                              baseline.magicDefence,
-                                              baseline.strength,
-                                              baseline.intelligence,
-                                              baseline.vitality,
-                                              baseline.spirit,
-                                              baseline.critRate,
-                                              baseline.magicCritRate,
-                                              baseline.critDamage,
-                                              baseline.attackSpeed,
-                                              baseline.moveSpeed,
-                                              baseline.castSpeed,
-                                              true,
-                                              rq->x,
-                                              rq->y,
-                                              &persistedEquippedItemIds);
-
-    if (savedOk && trackedPlayer) {
-        savedOk = persistEquipmentStateBatch(sql, boundPlayerId, *trackedPlayer);
-    }
-
-    if (savedOk) {
-        savedOk = persistItemTableEntries(sql,
-                                          QStringLiteral("user_item"),
-                                          boundPlayerId,
-                                          persistedBagEntries);
-    }
-
-    if (savedOk) {
-        savedOk = persistItemTableEntries(sql,
-                                          QStringLiteral("user_warehouse_item"),
-                                          boundPlayerId,
-                                          persistedWarehouseEntries);
-    }
-
-    if (savedOk) {
-        if (!upsertPlayerProgressState(sql,
-                                       boundPlayerId,
-                                       normalizedMapId,
-                                       rq->questStep,
-                                       persistedWarehouseUnlockTier,
-                                       rq->x,
-                                       rq->y)) {
-            savedOk = false;
-        }
-    }
+    const int persistedWarehouseUnlockTier =
+        trackedPlayer ? qMax(1, trackedPlayer->warehouseUnlockTier) : 1;
+    bool savedOk = upsertPlayerProgressState(sql,
+                                             boundPlayerId,
+                                             normalizedMapId,
+                                             rq->questStep,
+                                             persistedWarehouseUnlockTier,
+                                             rq->x,
+                                             rq->y);
 
     if (savedOk) {
         savedOk = sql.CommitTransaction();
@@ -5672,16 +6797,15 @@ void core::HandleInventoryAction(quint64 clientId, STRU_INVENTORY_ACTION_RQ* rq)
         return;
     }
 
-    ensureEquipmentColumns();
-    ensureEquipmentStateTable();
-    ensureProgressStateTable();
-    ensureWarehouseStateTable();
-
     auto sendFailureWithoutSnapshot = [&](int playerId, quint16 action, int result, const QString& message) {
         STRU_INVENTORY_ACTION_RS rs{};
         rs.playerId = playerId;
         rs.action = action;
+        rs.actionArg = rq->actionArg;
         rs.result = result;
+        rs.requestItemId = rq->itemId;
+        rs.requestItemCount = rq->itemCount;
+        rs.requestSlotIndex = rq->slotIndex;
         std::strncpy(rs.message, message.toUtf8().constData(), sizeof(rs.message) - 1);
         const QByteArray packet = PacketBuilder::build(_default_protocol_inventory_action_rs, rs);
         emit sendToClient(clientId, packet);
@@ -5699,23 +6823,34 @@ void core::HandleInventoryAction(quint64 clientId, STRU_INVENTORY_ACTION_RQ* rq)
         return;
     }
 
-    auto sendSnapshot = [&](const Player_Information& playerInfo, int result, const QString& message) {
+    auto sendActionResponse = [&](const Player_Information& beforeInfo,
+                                  const Player_Information& afterInfo,
+                                  int result,
+                                  const QString& message,
+                                  quint16 responseFlags) {
         STRU_INVENTORY_ACTION_RS rs{};
-        fillInventoryActionSnapshot(rs, playerInfo);
-        rs.action = rq->action;
-        rs.result = result;
-        std::strncpy(rs.message, message.toUtf8().constData(), sizeof(rs.message) - 1);
+        fillInventoryActionDeltaResponse(rs,
+                                         beforeInfo,
+                                         afterInfo,
+                                         *rq,
+                                         result,
+                                         message,
+                                         responseFlags);
         const QByteArray packet = PacketBuilder::build(_default_protocol_inventory_action_rs, rs);
         emit sendToClient(clientId, packet);
+        return rs;
     };
 
     if (!trackedPlayer->bagLoaded || !trackedPlayer->warehouseLoaded) {
-        sendSnapshot(*trackedPlayer,
-                     _inventory_action_result_not_ready,
-                     QStringLiteral("背包数据还没初始化完成，请稍后再试。"));
+        sendActionResponse(*trackedPlayer,
+                           *trackedPlayer,
+                           _inventory_action_result_not_ready,
+                           QStringLiteral("背包数据还没初始化完成，请稍后再试。"),
+                           0);
         return;
     }
 
+    const Player_Information previous = *trackedPlayer;
     Player_Information updated = *trackedPlayer;
     updated.clientId = clientId;
     updated.bagEntries = normalizedPersistEntries(updated.bagEntries);
@@ -5726,6 +6861,7 @@ void core::HandleInventoryAction(quint64 clientId, STRU_INVENTORY_ACTION_RQ* rq)
     int resultCode = _inventory_action_result_invalid_request;
     QString actionMessage = QStringLiteral("无效的物品操作请求。");
     bool shouldPersist = false;
+    quint16 responseFlags = 0;
 
     switch (rq->action) {
     case _inventory_action_use_consumable:
@@ -5783,6 +6919,103 @@ void core::HandleInventoryAction(quint64 clientId, STRU_INVENTORY_ACTION_RQ* rq)
                                 .arg(qMax(0, qMin(maxMana, trackedPlayer->mana + healMp) - trackedPlayer->mana));
         }
         shouldPersist = true;
+        break;
+    }
+    case _inventory_action_equip_from_bag:
+    {
+        const int slotIndex = qBound(0, static_cast<int>(rq->actionArg), MAX_EQUIPMENT_SLOT_NUM - 1);
+        QString failureMessage;
+        if (!moveTrackedBagItemToEquipment(updated, qMax(0, rq->itemId), slotIndex, &failureMessage)) {
+            resultCode = _inventory_action_result_invalid_target;
+            actionMessage = failureMessage.isEmpty()
+                                ? QStringLiteral("当前无法完成穿戴操作。")
+                                : failureMessage;
+            break;
+        }
+
+        clampTrackedVitalsToEquipmentCaps(updated);
+        resultCode = _inventory_action_result_success;
+        actionMessage = QStringLiteral("穿戴请求已由服务器确认。");
+        shouldPersist = true;
+        responseFlags |= _inventory_action_response_apply_local_layout;
+        break;
+    }
+    case _inventory_action_unequip_to_bag:
+    {
+        const int slotIndex = qBound(0, rq->slotIndex, MAX_EQUIPMENT_SLOT_NUM - 1);
+        QString failureMessage;
+        if (!moveTrackedEquipmentToBag(updated, slotIndex, &failureMessage)) {
+            resultCode = _inventory_action_result_invalid_target;
+            actionMessage = failureMessage.isEmpty()
+                                ? QStringLiteral("当前无法完成卸装操作。")
+                                : failureMessage;
+            break;
+        }
+
+        clampTrackedVitalsToEquipmentCaps(updated);
+        resultCode = _inventory_action_result_success;
+        actionMessage = QStringLiteral("卸装请求已由服务器确认。");
+        shouldPersist = true;
+        responseFlags |= _inventory_action_response_apply_local_layout;
+        break;
+    }
+    case _inventory_action_move_equipment:
+    {
+        const int fromSlot = qBound(0, rq->slotIndex, MAX_EQUIPMENT_SLOT_NUM - 1);
+        const int toSlot = qBound(0, static_cast<int>(rq->actionArg), MAX_EQUIPMENT_SLOT_NUM - 1);
+        QString failureMessage;
+        if (!moveTrackedEquipmentBetweenSlots(updated, fromSlot, toSlot, &failureMessage)) {
+            resultCode = _inventory_action_result_invalid_target;
+            actionMessage = failureMessage.isEmpty()
+                                ? QStringLiteral("当前无法完成装备换位操作。")
+                                : failureMessage;
+            break;
+        }
+
+        resultCode = _inventory_action_result_success;
+        actionMessage = QStringLiteral("装备换位已由服务器确认。");
+        shouldPersist = true;
+        responseFlags |= _inventory_action_response_apply_local_layout;
+        break;
+    }
+    case _inventory_action_move_bag_to_warehouse:
+    {
+        const int transferCount = qMax(0, rq->itemCount);
+        QString failureMessage;
+        if (!moveTrackedBagItemsToWarehouse(updated, qMax(0, rq->itemId), transferCount, &failureMessage)) {
+            resultCode = _inventory_action_result_invalid_target;
+            actionMessage = failureMessage.isEmpty()
+                                ? QStringLiteral("当前无法完成物品入库操作。")
+                                : failureMessage;
+            break;
+        }
+
+        resultCode = _inventory_action_result_success;
+        actionMessage = transferCount > 0
+                            ? QStringLiteral("物品已存入仓库。")
+                            : QStringLiteral("仓库内同类物品布局已确认。");
+        shouldPersist = transferCount > 0;
+        responseFlags |= _inventory_action_response_apply_local_layout;
+        break;
+    }
+    case _inventory_action_move_warehouse_to_bag:
+    {
+        const int transferCount = qMax(0, rq->itemCount);
+        QString failureMessage;
+        if (!moveTrackedWarehouseItemsToBag(updated, qMax(0, rq->itemId), transferCount, &failureMessage)) {
+            resultCode = _inventory_action_result_invalid_target;
+            actionMessage = failureMessage.isEmpty()
+                                ? QStringLiteral("当前无法从仓库取回该物品。")
+                                : failureMessage;
+            break;
+        }
+
+        resultCode = _inventory_action_result_success;
+        actionMessage = transferCount > 0
+                            ? QStringLiteral("物品已从仓库取回。")
+                            : QStringLiteral("背包内同类物品布局已确认。");
+        shouldPersist = transferCount > 0;
+        responseFlags |= _inventory_action_response_apply_local_layout;
         break;
     }
     case _inventory_action_unlock_warehouse:
@@ -5962,20 +7195,38 @@ void core::HandleInventoryAction(quint64 clientId, STRU_INVENTORY_ACTION_RQ* rq)
     }
 
     if (!shouldPersist) {
-        sendSnapshot(*trackedPlayer, resultCode, actionMessage);
+        sendActionResponse(previous, updated, resultCode, actionMessage, responseFlags);
         return;
     }
 
-    if (!persistTrackedPlayerInventoryState(updated)) {
-        sendSnapshot(*trackedPlayer,
-                     _inventory_action_result_server_error,
-                     QStringLiteral("服务器保存失败，请稍后再试。"));
+    updated.inventoryStateVersion = trackedPlayer->inventoryStateVersion + 1;
+    STRU_INVENTORY_ACTION_RS stagedResponse{};
+    fillInventoryActionDeltaResponse(stagedResponse,
+                                     previous,
+                                     updated,
+                                     *rq,
+                                     resultCode,
+                                     actionMessage,
+                                     responseFlags);
+    QString stageError;
+    if (!stageInventoryPersistence(updated,
+                                   inventoryActionName(rq->action),
+                                   inventoryActionJournalPayload(stagedResponse),
+                                   &stageError))
+    {
+        sendActionResponse(previous,
+                           previous,
+                           _inventory_action_result_server_error,
+                           stageError.isEmpty()
+                               ? QStringLiteral("库存状态暂时无法持久化，请稍后重试。")
+                               : stageError,
+                           0);
         return;
     }
 
     *trackedPlayer = updated;
     trackedPlayer->clientId = clientId;
-    sendSnapshot(*trackedPlayer, resultCode, actionMessage);
+    sendActionResponse(previous, *trackedPlayer, resultCode, actionMessage, responseFlags);
 }
 
 /**
@@ -6423,8 +7674,11 @@ void core::HandleMonsterHit(quint64 clientId, STRU_MONSTER_HIT_RQ* rq)
             if (!trackedPlayer) {
                 continue;
             }
+
+            const Player_Information previousRewardState = *trackedPlayer;
+            Player_Information updatedRewardState = previousRewardState;
             bool leveledUp = false;
-            const int expReward = applyServerMonsterRewardProgression(*trackedPlayer,
+            const int expReward = applyServerMonsterRewardProgression(updatedRewardState,
                                                                       attackerInfo->mapId,
                                                                       resolvedMonsterLevel,
                                                                       spawn.monsterTier,
@@ -6432,13 +7686,36 @@ void core::HandleMonsterHit(quint64 clientId, STRU_MONSTER_HIT_RQ* rq)
             MonsterSpawnDefinition rewardDefinition = spawn;
             rewardDefinition.monsterLevel = resolvedMonsterLevel;
             const QVector<QPair<int, int>> plannedDrops = serverGenerateMonsterDrops(rewardDefinition);
-            const QVector<QPair<int, int>> acceptedDrops = applyDropsToTrackedBag(*trackedPlayer,
+            const QVector<QPair<int, int>> acceptedDrops = applyDropsToTrackedBag(updatedRewardState,
                                                                                   plannedDrops,
                                                                                   nowMs);
-            if (!persistAuthoritativeRewardState(*trackedPlayer)) {
-                qWarning() << "Failed to persist authoritative reward state for player"
-                           << trackedPlayer->player_UserId;
+            updatedRewardState.inventoryStateVersion = previousRewardState.inventoryStateVersion + 1;
+
+            QJsonObject rewardEvent;
+            rewardEvent.insert(QStringLiteral("type"), QStringLiteral("monster_reward"));
+            rewardEvent.insert(QStringLiteral("killerPlayerId"), attackerInfo->player_UserId);
+            rewardEvent.insert(QStringLiteral("monsterRuntimeId"), rq->monsterRuntimeId);
+            rewardEvent.insert(QStringLiteral("monsterName"), spawn.displayName);
+            rewardEvent.insert(QStringLiteral("expReward"), expReward);
+            rewardEvent.insert(QStringLiteral("mapId"), attackerInfo->mapId);
+            rewardEvent.insert(QStringLiteral("monsterLevel"), resolvedMonsterLevel);
+            rewardEvent.insert(QStringLiteral("leveledUp"), leveledUp);
+            rewardEvent.insert(QStringLiteral("drops"),
+                               inventoryJournalItemEntriesToJson(acceptedDrops));
+            QString stageError;
+            if (!stageInventoryPersistence(updatedRewardState,
+                                           QStringLiteral("monster_reward"),
+                                           QString::fromUtf8(
+                                               QJsonDocument(rewardEvent).toJson(QJsonDocument::Compact)),
+                                           &stageError))
+            {
+                qWarning() << "Failed to stage monster reward persistence:"
+                           << trackedPlayer->player_UserId
+                           << stageError;
+                continue;
             }
+
+            *trackedPlayer = updatedRewardState;
 
             STRU_MONSTER_REWARD_RS rewardRs{};
             rewardRs.recipientPlayerId = trackedPlayer->player_UserId;
