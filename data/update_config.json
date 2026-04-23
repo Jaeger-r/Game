@@ -1,0 +1,14 @@
+{
+    "enabled": false,
+    "autoCheckOnLaunch": false,
+    "autoDownload": true,
+    "promptBeforeRestart": false,
+    "manifestUrl": "",
+    "channel": "stable",
+    "currentVersion": "0.1.0",
+    "appId": "jaeger-server",
+    "launcherPath": "GameServer",
+    "updaterPath": "JaegerUpdater",
+    "versionFilePath": "data/version.json",
+    "requestTimeoutMs": 5000
+}

@@ -1,0 +1,17 @@
+{
+  "server": {
+    "mode": "gui",
+    "listenHost": "0.0.0.0",
+    "tcpPort": 1234,
+    "kcpPort": 1235,
+    "dataDir": "data",
+    "logDir": "logs"
+  },
+  "mysql": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "root",
+    "database": "disk",
+    "poolSize": 10
+  }
+}

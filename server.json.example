@@ -1,0 +1,18 @@
+{
+  "server": {
+    "mode": "headless",
+    "listenHost": "0.0.0.0",
+    "tcpPort": 1234,
+    "kcpPort": 1235,
+    "dataDir": "/opt/jaeger-server/data",
+    "logDir": "/opt/jaeger-server/logs"
+  },
+  "mysql": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "jaeger_server",
+    "password": "replace_me",
+    "database": "disk",
+    "poolSize": 10
+  }
+}

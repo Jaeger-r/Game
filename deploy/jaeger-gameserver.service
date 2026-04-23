@@ -1,0 +1,15 @@
+[Unit]
+Description=Jaeger GameServer
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/jaeger-server
+EnvironmentFile=-/opt/jaeger-server/server.env
+ExecStart=/opt/jaeger-server/GameServer --headless --config /opt/jaeger-server/server.json
+Restart=always
+RestartSec=3
+Environment=QT_QPA_PLATFORM=offscreen
+
+[Install]
+WantedBy=multi-user.target

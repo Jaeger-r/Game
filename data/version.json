@@ -1,0 +1,7 @@
+{
+    "appId": "jaeger-server",
+    "channel": "stable",
+    "version": "0.1.0",
+    "displayName": "Jaeger GameServer",
+    "launcherPath": "GameServer"
+}
