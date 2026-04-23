@@ -6,7 +6,7 @@
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../QtKcp/src/qkcpsocket.h"
+#include "../../../ThirdParty/QtKcp/src/qkcpsocket.h"
 #include <QtCore/qmetatype.h>
 
 #include <QtCore/qtmochelpers.h>

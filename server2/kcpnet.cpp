@@ -1,5 +1,5 @@
 #include "kcpnet.h"
-#include "QtKcp/src/qkcpsocket.h"
+#include "qkcpsocket.h"
 #include <QUdpSocket>
 #include <QTimer>
 #include <QHostAddress>
@@ -15,6 +15,11 @@
 ///安全随机唯一KCP会话号
 class KcpConvManager {
 public:
+    /**
+     * @brief 处理allocConv相关逻辑
+     * @author Jaeger
+     * @date 2025.3.28
+     */
     static quint32 allocConv()
     {
         QMutexLocker locker(&kcp_conv_mutex);
@@ -27,6 +32,11 @@ public:
         usedConvs.insert(conv);
         return conv;
     }
+    /**
+     * @brief 处理releaseConv相关逻辑
+     * @author Jaeger
+     * @date 2025.3.28
+     */
     static void releaseConv(quint32 conv)
     {
         QMutexLocker locker(&kcp_conv_mutex);
@@ -40,6 +50,11 @@ private:
 QSet<quint32> KcpConvManager::usedConvs;
 QMutex KcpConvManager::kcp_conv_mutex;
 
+/**
+ * @brief 构造KcpNet对象并完成基础初始化
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 KcpNet::KcpNet(QObject* parent)
     : INet(parent),
     kcpserver(new QKcpServer(this))
@@ -47,13 +62,24 @@ KcpNet::KcpNet(QObject* parent)
 
 }
 
+/**
+ * @brief 初始化initNetWork相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool KcpNet::initNetWork(const QString& szip, quint16 port)
 {
+    Q_UNUSED(szip);
     // KCP服务器监听UDP端口
     if (!kcpserver->listen(QHostAddress::Any, port)) {
         qDebug() << "KCP Server listen failed on port:" << port;
+        m_listening = false;
+        m_listenPort = 0;
         return false;
     }
+
+    m_listening = true;
+    m_listenPort = port;
 
     qDebug() << "KCP Network Layer Initialized on port:" << port << "(Connection managed by TCP)";
 
@@ -63,7 +89,7 @@ bool KcpNet::initNetWork(const QString& szip, quint16 port)
         connect((core*)(core::getKernel()),
                 &core::sendToClientKcp,
                 this, &KcpNet::sendData,
-                Qt::QueuedConnection);
+                Qt::DirectConnection);
     }
 
     // 监听新KCP连接（由客户端主动连接）
@@ -72,6 +98,11 @@ bool KcpNet::initNetWork(const QString& szip, quint16 port)
     return true;
 }
 
+/**
+ * @brief 判断isKcpConnected相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool KcpNet::isKcpConnected(quint64 clientId) const
 {
     auto it = idToKcpSocket.find(clientId);
@@ -81,6 +112,25 @@ bool KcpNet::isKcpConnected(quint64 clientId) const
     return false;
 }
 
+/**
+ * @brief 查询monitorStats相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
+KcpMonitorStats KcpNet::monitorStats() const
+{
+    KcpMonitorStats stats;
+    stats.listening = m_listening;
+    stats.port = m_listenPort;
+    stats.activeConnections = kcpClientInfo.size();
+    return stats;
+}
+
+/**
+ * @brief 处理unInitNetWork相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::unInitNetWork()
 {
     // 清理所有KCP socket
@@ -101,8 +151,15 @@ void KcpNet::unInitNetWork()
     if (kcpserver) {
         kcpserver->close();
     }
+    m_listening = false;
+    m_listenPort = 0;
 }
 
+/**
+ * @brief 处理handleKcpNegotiate相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool KcpNet::handleKcpNegotiate(quint64 clientId, QTcpSocket* tcpSocket, quint32& kcpConv, quint16& kcpPort)
 {
     if (!tcpSocket) {
@@ -126,6 +183,11 @@ bool KcpNet::handleKcpNegotiate(quint64 clientId, QTcpSocket* tcpSocket, quint32
     return true;
 }
 
+/**
+ * @brief 处理onNewConnection相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::onNewConnection()
 {
     while (kcpserver->hasPendingConnections()) {
@@ -175,6 +237,11 @@ void KcpNet::onNewConnection()
     }
 }
 
+/**
+ * @brief 创建createKcpSocket相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool KcpNet::createKcpSocket(quint64 clientId, const QHostAddress& peerAddress, quint16 peerPort, quint32 kcpConv)
 {
     // 创建KCP socket（使用Fast模式以获得最低延迟）
@@ -245,6 +312,11 @@ bool KcpNet::createKcpSocket(quint64 clientId, const QHostAddress& peerAddress, 
     return true;
 }
 
+/**
+ * @brief 处理removeKcpSocket相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::removeKcpSocket(quint64 clientId)
 {
     // 从KCP客户端信息中获取conv并释放
@@ -270,6 +342,11 @@ void KcpNet::removeKcpSocket(quint64 clientId)
     qDebug() << "KCP Socket Removed for Client:" << clientId;
 }
 
+/**
+ * @brief 获取getKcpConv相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 quint32 KcpNet::getKcpConv(quint64 clientId) const
 {
     auto it = kcpClientInfo.find(clientId);
@@ -279,6 +356,11 @@ quint32 KcpNet::getKcpConv(quint64 clientId) const
     return 0;
 }
 
+/**
+ * @brief 获取getKcpAddress相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 QHostAddress KcpNet::getKcpAddress(quint64 clientId) const
 {
     auto it = kcpClientInfo.find(clientId);
@@ -288,6 +370,11 @@ QHostAddress KcpNet::getKcpAddress(quint64 clientId) const
     return QHostAddress();
 }
 
+/**
+ * @brief 获取getKcpPort相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 quint16 KcpNet::getKcpPort(quint64 clientId) const
 {
     auto it = kcpClientInfo.find(clientId);
@@ -297,6 +384,11 @@ quint16 KcpNet::getKcpPort(quint64 clientId) const
     return 0;
 }
 
+/**
+ * @brief 发送sendData相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool KcpNet::sendData(quint64 clientId, const QByteArray& data)
 {
     auto it = idToKcpSocket.find(clientId);
@@ -314,8 +406,15 @@ bool KcpNet::sendData(quint64 clientId, const QByteArray& data)
     return written > 0;
 }
 
+/**
+ * @brief 处理onUdpDataReceived相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::onUdpDataReceived(const QByteArray& data, const QHostAddress& peerAddress, quint16 peerPort)
 {
+    Q_UNUSED(data);
+
     // 这个方法用于处理从共享UDP socket接收的数据
     // 但由于QKcpSocket每个都有自己的UDP socket，这个方法可能不会被使用
     // 保留作为扩展接口
@@ -342,6 +441,11 @@ void KcpNet::onUdpDataReceived(const QByteArray& data, const QHostAddress& peerA
     // 实际数据接收通过onKcpSocketReadyRead处理
 }
 
+/**
+ * @brief 处理onKcpSocketReadyRead相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::onKcpSocketReadyRead()
 {
     QKcpSocket* kcpSocket = qobject_cast<QKcpSocket*>(sender());
@@ -363,7 +467,7 @@ void KcpNet::onKcpSocketReadyRead()
     }
 
     // 读取数据
-    QByteArray data = kcpSocket->readAll();
+    const QByteArray data = kcpSocket->readAll();
 
     if (data.isEmpty()) {
         return;
@@ -373,6 +477,11 @@ void KcpNet::onKcpSocketReadyRead()
     emit kcpDataReceived(clientId, data);
 }
 
+/**
+ * @brief 更新updateKcpSockets相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void KcpNet::updateKcpSockets()
 {
     // KCP需要定期更新，但QKcpSocket内部已经有定时器处理

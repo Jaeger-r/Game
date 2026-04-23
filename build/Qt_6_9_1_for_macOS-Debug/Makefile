@@ -12,12 +12,12 @@ EQ            = =
 
 ####### Compiler, tools and options
 
-CC            = /Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
-CXX           = /Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
+CC            = /Library/Developer/CommandLineTools/usr/bin/clang
+CXX           = /Library/Developer/CommandLineTools/usr/bin/clang++
 DEFINES       = -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_SQL_LIB -DQT_CORE_LIB
-CFLAGS        = -pipe -g $(EXPORT_ARCH_ARGS) -isysroot /Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=12 -Wall -Wextra $(DEFINES)
-CXXFLAGS      = -pipe -stdlib=libc++ -g -std=gnu++1z $(EXPORT_ARCH_ARGS) -isysroot /Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=12 -Wall -Wextra $(DEFINES)
-INCPATH       = -I../../../GameServer -I. -I/usr/local/mysql-8.0.35-macos13-arm64/include -I../../QtKcp/src -I../../QtKcp/3rdparty/kcp -I../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtGui.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtSql.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I../../../../Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I../../../../Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/System/Library/Frameworks/AGL.framework/Headers -I../../../../Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I../../../../Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/System/Library/Frameworks/AGL.framework/Headers -I../../../../Qt/6.9.1/macos/mkspecs/macx-clang -F/Volumes/Jaeger/Qt/6.9.1/macos/lib
+CFLAGS        = -pipe -g $(EXPORT_ARCH_ARGS) -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=12 -Wall -Wextra $(DEFINES)
+CXXFLAGS      = -pipe -stdlib=libc++ -include arm_acle.h -g -std=gnu++1z $(EXPORT_ARCH_ARGS) -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=12 -Wall -Wextra $(DEFINES)
+INCPATH       = -I../../../GameServer -I. -I../../../Shared -I../../../ThirdParty/QtKcp/src -I../../../ThirdParty/QtKcp/3rdparty/kcp -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtGui.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtSql.framework/Headers -I../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/AGL.framework/Headers/ -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/AGL.framework/Headers/ -I../../../../Qt/6.9.1/macos/mkspecs/macx-clang -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib
 QMAKE         = /Volumes/Jaeger/Qt/6.9.1/macos/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -38,11 +38,11 @@ TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = GameServer1.0.0
 DISTDIR = /Volumes/Jaeger/qt\ project2/GameServer/build/Qt_6_9_1_for_macOS-Debug/.tmp/GameServer1.0.0
-LINK          = /Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
-LFLAGS        = -stdlib=libc++ -headerpad_max_install_names $(EXPORT_ARCH_ARGS) -isysroot /Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=12 -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,/Volumes/Jaeger/Qt/6.9.1/macos/lib
-LIBS          = $(SUBLIBS) -F/Volumes/Jaeger/Qt/6.9.1/macos/lib -L/usr/local/mysql-8.0.35-macos13-arm64/lib -lmysqlclient /usr/local/mysql-8.0.35-macos13-arm64/lib/libmysqlclient.dylib -framework QtWidgets -framework QtGui -framework AppKit -framework ImageIO -framework Metal -framework QtNetwork -framework QtSql -framework QtCore -framework IOKit -framework DiskArbitration -framework UniformTypeIdentifiers -framework AGL -framework OpenGL   
-AR            = /Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar cq
-RANLIB        = /Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib -s
+LINK          = /Library/Developer/CommandLineTools/usr/bin/clang++
+LFLAGS        = -stdlib=libc++ -headerpad_max_install_names $(EXPORT_ARCH_ARGS) -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=12 -Wl,-rpath,/usr/local/mysql-8.0.35-macos13-arm64/lib -Wl,-rpath,/opt/homebrew/Cellar/tinyxml2/11.0.0/lib -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,/Volumes/Jaeger/Qt/6.9.1/macos/lib
+LIBS          = $(SUBLIBS) -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib -L/usr/local/mysql-8.0.35-macos13-arm64/lib -lmysqlclient -L/opt/homebrew/Cellar/tinyxml2/11.0.0/lib -ltinyxml2 -framework QtWidgets -framework QtGui -framework AppKit -framework ImageIO -framework Metal -framework QtNetwork -framework QtSql -framework QtCore -framework IOKit -framework DiskArbitration -framework UniformTypeIdentifiers -framework AGL -framework OpenGL   
+AR            = /Library/Developer/CommandLineTools/usr/bin/ar cq
+RANLIB        = /Library/Developer/CommandLineTools/usr/bin/ranlib -s
 SED           = sed
 STRIP         = strip
 
@@ -52,38 +52,61 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../../core.cpp \
+SOURCES       = ../../../Shared/sharedgamecontent.cpp \
+		../../../Shared/sharedpaths.cpp \
+		../../../Shared/sharedupdate.cpp \
+		../../../ThirdParty/QtKcp/src/qkcpserver.cpp \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.cpp \
+		../../../ThirdParty/QtKcp/3rdparty/kcp/ikcp.c \
+		../../core.cpp \
 		../../main.cpp \
-		../../QtKcp/src/qkcpserver.cpp \
-		../../QtKcp/src/qkcpsocket.cpp \
-		../../QtKcp/3rdparty/kcp/ikcp.c \
+		../../serverconfig.cpp \
+		../../serverupdatemanager.cpp \
+		../../servermonitorbridge.cpp \
+		../../servermonitorwindow.cpp \
 		../../server2/kcpnet.cpp \
 		../../server2/tcpnet.cpp \
 		../../mysql/CMySql.cpp \
-		../../mysql/mysqlconnpool.cpp moc_INet.cpp \
+		../../mysql/mysqlconnpool.cpp moc_qkcpserver.cpp \
+		moc_qkcpsocket.cpp \
+		moc_INet.cpp \
 		moc_kcpnet.cpp \
 		moc_tcpnet.cpp \
 		moc_Icore.cpp \
 		moc_core.cpp \
-		moc_qkcpserver.cpp \
-		moc_qkcpsocket.cpp
-OBJECTS       = core.o \
-		main.o \
+		moc_servermonitorbridge.cpp \
+		moc_servermonitorwindow.cpp
+OBJECTS       = sharedgamecontent.o \
+		sharedpaths.o \
+		sharedupdate.o \
 		qkcpserver.o \
 		qkcpsocket.o \
 		ikcp.o \
+		core.o \
+		main.o \
+		serverconfig.o \
+		serverupdatemanager.o \
+		servermonitorbridge.o \
+		servermonitorwindow.o \
 		kcpnet.o \
 		tcpnet.o \
 		CMySql.o \
 		mysqlconnpool.o \
+		moc_qkcpserver.o \
+		moc_qkcpsocket.o \
 		moc_INet.o \
 		moc_kcpnet.o \
 		moc_tcpnet.o \
 		moc_Icore.o \
 		moc_core.o \
-		moc_qkcpserver.o \
-		moc_qkcpsocket.o
-DIST          = /Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
+		moc_servermonitorbridge.o \
+		moc_servermonitorwindow.o
+DIST          = ../../deploy/jaeger-gameserver.service \
+		../../data/update_config.json \
+		../../data/version.json \
+		../../server.env.example \
+		../../server.json.example \
+		/Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
 		/Qt/6.9.1/macos/mkspecs/features/device_config.prf \
 		/Qt/6.9.1/macos/mkspecs/common/unix.conf \
 		/Qt/6.9.1/macos/mkspecs/common/mac.conf \
@@ -308,6 +331,8 @@ DIST          = /Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
 		/Qt/6.9.1/macos/mkspecs/features/mac/toolchain.prf \
 		/Qt/6.9.1/macos/mkspecs/features/default_pre.prf \
 		/Qt/6.9.1/macos/mkspecs/features/mac/default_pre.prf \
+		/Volumes/Shared/JaegerShared.pri \
+		/Volumes/ThirdParty/QtKcp/QtKcp.pri \
 		../../../../server2/server2.pri \
 		../../../../mysql/mysql.pri \
 		/Qt/6.9.1/macos/mkspecs/features/resolve_config.prf \
@@ -333,7 +358,21 @@ DIST          = /Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
 		/Qt/6.9.1/macos/mkspecs/features/exceptions.prf \
 		/Qt/6.9.1/macos/mkspecs/features/yacc.prf \
 		/Qt/6.9.1/macos/mkspecs/features/lex.prf \
-		../../../../GameServer.pro ../../server2/INet.h \
+		../../../../GameServer.pro ../../../Shared/jaegershared_global.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../../Shared/sharedpackdef.h \
+		../../../Shared/sharedpacketbuilder.h \
+		../../../Shared/sharedgamecontent.h \
+		../../../Shared/sharedlogging.h \
+		../../../Shared/sharednetconfig.h \
+		../../../Shared/sharedpaths.h \
+		../../../Shared/sharedupdate.h \
+		../../../ThirdParty/QtKcp/src/ikcp.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_p.h \
+		../../server2/INet.h \
 		../../server2/kcpnet.h \
 		../../server2/tcpnet.h \
 		../../mysql/CMySql.h \
@@ -342,16 +381,23 @@ DIST          = /Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
 		../../core.h \
 		../../packdef.h \
 		../../packetbuilder.h \
+		../../serverconfig.h \
+		../../serverupdatemanager.h \
+		../../servermonitorbridge.h \
+		../../servermonitortypes.h \
 		../../tou.h \
-		../../QtKcp/src/qkcpserver.h \
-		../../QtKcp/src/qkcpsocket.h \
-		../../QtKcp/src/qkcpsocket_global.h \
-		../../QtKcp/src/qkcpsocket_p.h \
-		QtKcp/3rdparty/kcp/ikcp.h ../../core.cpp \
+		../../servermonitorwindow.h ../../../Shared/sharedgamecontent.cpp \
+		../../../Shared/sharedpaths.cpp \
+		../../../Shared/sharedupdate.cpp \
+		../../../ThirdParty/QtKcp/src/qkcpserver.cpp \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.cpp \
+		../../../ThirdParty/QtKcp/3rdparty/kcp/ikcp.c \
+		../../core.cpp \
 		../../main.cpp \
-		../../QtKcp/src/qkcpserver.cpp \
-		../../QtKcp/src/qkcpsocket.cpp \
-		../../QtKcp/3rdparty/kcp/ikcp.c \
+		../../serverconfig.cpp \
+		../../serverupdatemanager.cpp \
+		../../servermonitorbridge.cpp \
+		../../servermonitorwindow.cpp \
 		../../server2/kcpnet.cpp \
 		../../server2/tcpnet.cpp \
 		../../mysql/CMySql.cpp \
@@ -362,8 +408,8 @@ TARGET        = GameServer.app/Contents/MacOS/GameServer
 
 ####### Custom Variables
 EXPORT_QMAKE_MAC_SDK = macosx
-EXPORT_QMAKE_MAC_SDK_VERSION = 15.2
-EXPORT_QMAKE_XCODE_DEVELOPER_PATH = /Volumes/Jaeger/Xcode.app/Contents/Developer
+EXPORT_QMAKE_MAC_SDK_VERSION = 26.4
+EXPORT_QMAKE_XCODE_DEVELOPER_PATH = /Library/Developer/CommandLineTools
 EXPORT__QMAKE_STASH_ = /Volumes/Jaeger/qt project2/GameServer/build/Qt_6_9_1_for_macOS-Debug/.qmake.stash
 EXPORT_VALID_ARCHS = x86_64 arm64
 EXPORT_DEFAULT_ARCHS = arm64
@@ -378,6 +424,8 @@ first: all
 
 GameServer.app/Contents/MacOS/GameServer:  $(OBJECTS)  
 	@test -d GameServer.app/Contents/MacOS/ || mkdir -p GameServer.app/Contents/MacOS/
+	'/Volumes/Jaeger/qt project2/scripts/build_agl_compat.sh' '/Volumes/Jaeger/qt project2/macos_frameworks' /tmp/codex_agl_frameworks 
+	
 	$(LINK) $(LFLAGS) -o $(TARGET)  $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 Makefile: ../../GameServer.pro ../../../../Qt/6.9.1/macos/mkspecs/features/spec_pre.prf \
@@ -605,6 +653,8 @@ Makefile: ../../GameServer.pro ../../../../Qt/6.9.1/macos/mkspecs/features/spec_
 		../../../../Qt/6.9.1/macos/mkspecs/features/mac/toolchain.prf \
 		../../../../Qt/6.9.1/macos/mkspecs/features/default_pre.prf \
 		../../../../Qt/6.9.1/macos/mkspecs/features/mac/default_pre.prf \
+		../../../Shared/JaegerShared.pri \
+		../../../ThirdParty/QtKcp/QtKcp.pri \
 		../../server2/server2.pri \
 		../../mysql/mysql.pri \
 		../../../../Qt/6.9.1/macos/mkspecs/features/resolve_config.prf \
@@ -862,6 +912,8 @@ Makefile: ../../GameServer.pro ../../../../Qt/6.9.1/macos/mkspecs/features/spec_
 ../../../../Qt/6.9.1/macos/mkspecs/features/mac/toolchain.prf:
 ../../../../Qt/6.9.1/macos/mkspecs/features/default_pre.prf:
 ../../../../Qt/6.9.1/macos/mkspecs/features/mac/default_pre.prf:
+../../../Shared/JaegerShared.pri:
+../../../ThirdParty/QtKcp/QtKcp.pri:
 ../../server2/server2.pri:
 ../../mysql/mysql.pri:
 ../../../../Qt/6.9.1/macos/mkspecs/features/resolve_config.prf:
@@ -917,8 +969,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents ../../server2/INet.h ../../server2/kcpnet.h ../../server2/tcpnet.h ../../mysql/CMySql.h ../../mysql/mysqlconnpool.h ../../Icore.h ../../core.h ../../packdef.h ../../packetbuilder.h ../../tou.h ../../QtKcp/src/qkcpserver.h ../../QtKcp/src/qkcpsocket.h ../../QtKcp/src/qkcpsocket_global.h ../../QtKcp/src/qkcpsocket_p.h QtKcp/3rdparty/kcp/ikcp.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../../core.cpp ../../main.cpp ../../QtKcp/src/qkcpserver.cpp ../../QtKcp/src/qkcpsocket.cpp ../../QtKcp/3rdparty/kcp/ikcp.c ../../server2/kcpnet.cpp ../../server2/tcpnet.cpp ../../mysql/CMySql.cpp ../../mysql/mysqlconnpool.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../../../Shared/jaegershared_global.h ../../../Shared/sharedcombatbalance.h ../../../Shared/sharedpackdef.h ../../../Shared/sharedpacketbuilder.h ../../../Shared/sharedgamecontent.h ../../../Shared/sharedlogging.h ../../../Shared/sharednetconfig.h ../../../Shared/sharedpaths.h ../../../Shared/sharedupdate.h ../../../ThirdParty/QtKcp/src/ikcp.h ../../../ThirdParty/QtKcp/src/qkcpserver.h ../../../ThirdParty/QtKcp/src/qkcpsocket.h ../../../ThirdParty/QtKcp/src/qkcpsocket_global.h ../../../ThirdParty/QtKcp/src/qkcpsocket_p.h ../../server2/INet.h ../../server2/kcpnet.h ../../server2/tcpnet.h ../../mysql/CMySql.h ../../mysql/mysqlconnpool.h ../../Icore.h ../../core.h ../../packdef.h ../../packetbuilder.h ../../serverconfig.h ../../serverupdatemanager.h ../../servermonitorbridge.h ../../servermonitortypes.h ../../tou.h ../../servermonitorwindow.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../../../Shared/sharedgamecontent.cpp ../../../Shared/sharedpaths.cpp ../../../Shared/sharedupdate.cpp ../../../ThirdParty/QtKcp/src/qkcpserver.cpp ../../../ThirdParty/QtKcp/src/qkcpsocket.cpp ../../../ThirdParty/QtKcp/3rdparty/kcp/ikcp.c ../../core.cpp ../../main.cpp ../../serverconfig.cpp ../../serverupdatemanager.cpp ../../servermonitorbridge.cpp ../../servermonitorwindow.cpp ../../server2/kcpnet.cpp ../../server2/tcpnet.cpp ../../mysql/CMySql.cpp ../../mysql/mysqlconnpool.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -947,9 +999,29 @@ benchmark: first
 
 compiler_rcc_make_all:
 compiler_rcc_clean:
-compiler_moc_header_make_all: moc_INet.cpp moc_kcpnet.cpp moc_tcpnet.cpp moc_Icore.cpp moc_core.cpp moc_qkcpserver.cpp moc_qkcpsocket.cpp
+compiler_moc_header_make_all: moc_qkcpserver.cpp moc_qkcpsocket.cpp moc_INet.cpp moc_kcpnet.cpp moc_tcpnet.cpp moc_Icore.cpp moc_core.cpp moc_servermonitorbridge.cpp moc_servermonitorwindow.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_INet.cpp moc_kcpnet.cpp moc_tcpnet.cpp moc_Icore.cpp moc_core.cpp moc_qkcpserver.cpp moc_qkcpsocket.cpp
+	-$(DEL_FILE) moc_qkcpserver.cpp moc_qkcpsocket.cpp moc_INet.cpp moc_kcpnet.cpp moc_tcpnet.cpp moc_Icore.cpp moc_core.cpp moc_servermonitorbridge.cpp moc_servermonitorwindow.cpp
+moc_qkcpserver.cpp: ../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
+		../../../../Qt/6.9.1/macos/libexec/moc
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../../ThirdParty/QtKcp/src/qkcpserver.h -o moc_qkcpserver.cpp
+
+moc_qkcpsocket.cpp: ../../../ThirdParty/QtKcp/src/qkcpsocket.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
+		../../../../Qt/6.9.1/macos/libexec/moc
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../../ThirdParty/QtKcp/src/qkcpsocket.h -o moc_qkcpsocket.cpp
+
 moc_INet.cpp: ../../server2/INet.h \
 		../../tou.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpSocket \
@@ -961,10 +1033,13 @@ moc_INet.cpp: ../../server2/INet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/INet.h -o moc_INet.cpp
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/INet.h -o moc_INet.cpp
 
 moc_kcpnet.cpp: ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMap \
@@ -986,14 +1061,22 @@ moc_kcpnet.cpp: ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../servermonitortypes.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/kcpnet.h -o moc_kcpnet.cpp
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/kcpnet.h -o moc_kcpnet.cpp
 
 moc_tcpnet.cpp: ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpServer \
@@ -1008,8 +1091,6 @@ moc_tcpnet.cpp: ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
 		../../server2/INet.h \
@@ -1017,15 +1098,21 @@ moc_tcpnet.cpp: ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../core.h \
 		../../Icore.h \
 		../../server2/tcpnet.h \
+		../../servermonitortypes.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
 		../../server2/kcpnet.h \
@@ -1046,16 +1133,22 @@ moc_tcpnet.cpp: ../../server2/tcpnet.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
 		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
 		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/tcpnet.h -o moc_tcpnet.cpp
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../server2/tcpnet.h -o moc_tcpnet.cpp
 
 moc_Icore.cpp: ../../Icore.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpSocket \
@@ -1063,7 +1156,7 @@ moc_Icore.cpp: ../../Icore.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../Icore.h -o moc_Icore.cpp
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../Icore.h -o moc_Icore.cpp
 
 moc_core.cpp: ../../core.h \
 		../../Icore.h \
@@ -1082,8 +1175,6 @@ moc_core.cpp: ../../core.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
 		../../server2/INet.h \
@@ -1091,14 +1182,22 @@ moc_core.cpp: ../../core.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../core.h \
 		../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../servermonitortypes.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../mysql/CMySql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
@@ -1114,48 +1213,45 @@ moc_core.cpp: ../../core.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
 		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../../../Qt/6.9.1/macos/libexec/moc
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../core.h -o moc_core.cpp
+
+moc_servermonitorbridge.cpp: ../../servermonitorbridge.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h \
+		../../../../Qt/6.9.1/macos/libexec/moc
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../servermonitorbridge.h -o moc_servermonitorbridge.cpp
+
+moc_servermonitorwindow.cpp: ../../servermonitorwindow.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QMainWindow \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qmainwindow.h \
+		../../servermonitortypes.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../core.h -o moc_core.cpp
-
-moc_qkcpserver.cpp: ../../QtKcp/src/qkcpserver.h \
-		../../QtKcp/src/qkcpsocket_global.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../QtKcp/src/qkcpserver.h -o moc_qkcpserver.cpp
-
-moc_qkcpsocket.cpp: ../../QtKcp/src/qkcpsocket.h \
-		../../QtKcp/src/qkcpsocket_global.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../../../Qt/6.9.1/macos/libexec/moc
-	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/src' -I'/Volumes/Jaeger/qt project2/GameServer/QtKcp/3rdparty/kcp' -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../QtKcp/src/qkcpsocket.h -o moc_qkcpsocket.cpp
+	/Volumes/Jaeger/Qt/6.9.1/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=16 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Volumes/Jaeger/Qt/6.9.1/macos/mkspecs/macx-clang -I'/Volumes/Jaeger/qt project2/GameServer' -I'/Volumes/Jaeger/qt project2/Shared' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/src' -I'/Volumes/Jaeger/qt project2/ThirdParty/QtKcp/3rdparty/kcp' -I/usr/local/mysql-8.0.35-macos13-arm64/include -I/opt/homebrew/Cellar/tinyxml2/11.0.0/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtWidgets.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtGui.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtNetwork.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtSql.framework/Headers -I/Volumes/Jaeger/Qt/6.9.1/macos/lib/QtCore.framework/Headers -I. -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Volumes/Jaeger/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/tmp/codex_agl_frameworks -F/Volumes/Jaeger/Qt/6.9.1/macos/lib ../../servermonitorwindow.h -o moc_servermonitorwindow.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
@@ -1175,6 +1271,129 @@ compiler_clean: compiler_moc_header_clean
 
 ####### Compile
 
+sharedgamecontent.o: ../../../Shared/sharedgamecontent.cpp ../../../Shared/sharedgamecontent.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QHash \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qhash.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPair \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpair.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonarray.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonDocument \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsondocument.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonParseError \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonparseerror.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o sharedgamecontent.o ../../../Shared/sharedgamecontent.cpp
+
+sharedpaths.o: ../../../Shared/sharedpaths.cpp ../../../Shared/sharedpaths.h \
+		../../../Shared/jaegershared_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDir \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdir.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o sharedpaths.o ../../../Shared/sharedpaths.cpp
+
+sharedupdate.o: ../../../Shared/sharedupdate.cpp ../../../Shared/sharedupdate.h \
+		../../../Shared/jaegershared_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCryptographicHash \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcryptographichash.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDir \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdir.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonarray.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonDocument \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsondocument.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRegularExpression \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qregularexpression.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSaveFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qsavefile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStandardPaths \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstandardpaths.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QUrl \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qurl.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o sharedupdate.o ../../../Shared/sharedupdate.cpp
+
+qkcpserver.o: ../../../ThirdParty/QtKcp/src/qkcpserver.cpp ../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_p.h \
+		../../../ThirdParty/QtKcp/src/ikcp.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QBasicTimer \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbasictimer.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkDatagram \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkdatagram.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QQueue \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qqueue.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qkcpserver.o ../../../ThirdParty/QtKcp/src/qkcpserver.cpp
+
+qkcpsocket.o: ../../../ThirdParty/QtKcp/src/qkcpsocket.cpp ../../../ThirdParty/QtKcp/src/qkcpsocket_p.h \
+		../../../ThirdParty/QtKcp/src/ikcp.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QBasicTimer \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbasictimer.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkDatagram \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkdatagram.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qkcpsocket.o ../../../ThirdParty/QtKcp/src/qkcpsocket.cpp
+
+ikcp.o: ../../../ThirdParty/QtKcp/3rdparty/kcp/ikcp.c ../../../ThirdParty/QtKcp/src/ikcp.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o ikcp.o ../../../ThirdParty/QtKcp/3rdparty/kcp/ikcp.c
+
 core.o: ../../core.cpp ../../core.h \
 		../../Icore.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpSocket \
@@ -1192,8 +1411,6 @@ core.o: ../../core.cpp ../../core.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
 		../../server2/INet.h \
@@ -1201,10 +1418,16 @@ core.o: ../../core.cpp ../../core.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../servermonitortypes.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
 		../../server2/kcpnet.h \
@@ -1225,24 +1448,57 @@ core.o: ../../core.cpp ../../core.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
 		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCryptographicHash \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcryptographichash.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtextstream.h \
-		../../QtKcp/src/qkcpsocket.h \
-		../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDir \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdir.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonarray.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonDocument \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsondocument.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QLineF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qline.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRandomGenerator \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrandom.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		/opt/homebrew/Cellar/tinyxml2/11.0.0/include/tinyxml2.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
+		../../../Shared/sharedgamecontent.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPair \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpair.h \
+		../../../Shared/sharedpaths.h \
+		../../../Shared/jaegershared_global.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o core.o ../../core.cpp
 
 main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QApplication \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qapplication.h \
 		../../core.h \
 		../../Icore.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpSocket \
@@ -1260,8 +1516,6 @@ main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/Q
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
 		../../server2/INet.h \
@@ -1269,10 +1523,16 @@ main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/Q
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../servermonitortypes.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
 		../../server2/kcpnet.h \
@@ -1293,12 +1553,25 @@ main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/Q
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
 		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
+		../../serverupdatemanager.h \
+		../../../Shared/sharedupdate.h \
+		../../../Shared/jaegershared_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QUrl \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qurl.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTextStream \
@@ -1308,58 +1581,182 @@ main.o: ../../main.cpp ../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/Q
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h \
+		../../servermonitorbridge.h \
+		../../servermonitorwindow.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QMainWindow \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qmainwindow.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../../main.cpp
 
-qkcpserver.o: ../../QtKcp/src/qkcpserver.cpp ../../QtKcp/src/qkcpserver.h \
-		../../QtKcp/src/qkcpsocket_global.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../QtKcp/src/qkcpsocket.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
-		../../QtKcp/src/qkcpsocket_p.h \
-		../../QtKcp/src/ikcp.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QBasicTimer \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbasictimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkDatagram \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkdatagram.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
+serverconfig.o: ../../serverconfig.cpp ../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDir \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdir.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonDocument \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsondocument.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonobject.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QJsonParseError \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qjsonparseerror.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QProcessEnvironment \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qprocess.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o serverconfig.o ../../serverconfig.cpp
+
+serverupdatemanager.o: ../../serverupdatemanager.cpp ../../serverupdatemanager.h \
+		../../../Shared/sharedupdate.h \
+		../../../Shared/jaegershared_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QUrl \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qurl.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QQueue \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qqueue.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qkcpserver.o ../../QtKcp/src/qkcpserver.cpp
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDir \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdir.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QEventLoop \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qeventloop.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QFileInfo \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qfileinfo.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkAccessManager \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkReply \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkreply.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkRequest \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkrequest.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QProcess \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qprocess.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSaveFile \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qsavefile.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o serverupdatemanager.o ../../serverupdatemanager.cpp
 
-qkcpsocket.o: ../../QtKcp/src/qkcpsocket.cpp ../../QtKcp/src/qkcpsocket_p.h \
-		../../QtKcp/src/ikcp.h \
-		../../QtKcp/src/qkcpsocket.h \
-		../../QtKcp/src/qkcpsocket_global.h \
+servermonitorbridge.o: ../../servermonitorbridge.cpp ../../servermonitorbridge.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QBasicTimer \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbasictimer.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o servermonitorbridge.o ../../servermonitorbridge.cpp
+
+servermonitorwindow.o: ../../servermonitorwindow.cpp ../../servermonitorwindow.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QMainWindow \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qmainwindow.h \
+		../../servermonitortypes.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QNetworkDatagram \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qnetworkdatagram.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QApplication \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qapplication.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qgridlayout.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QHeaderView \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qheaderview.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QHBoxLayout \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qboxlayout.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qlabel.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QPlainTextEdit \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qplaintextedit.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QTableWidget \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qtablewidget.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QTableWidgetItem \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QTabWidget \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qtabwidget.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QVBoxLayout \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../../../Qt/6.9.1/macos/lib/QtWidgets.framework/Headers/qwidget.h \
+		../../core.h \
+		../../Icore.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpSocket \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qtcpsocket.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
+		../../server2/tcpnet.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QTcpServer \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qtcpserver.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMap \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmap.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QHash \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qhash.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
+		../../server2/INet.h \
+		../../tou.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QHostAddress \
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
+		../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
-		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qkcpsocket.o ../../QtKcp/src/qkcpsocket.cpp
-
-ikcp.o: ../../QtKcp/3rdparty/kcp/ikcp.c ../../QtKcp/src/ikcp.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o ikcp.o ../../QtKcp/3rdparty/kcp/ikcp.c
+		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
+		../../mysql/CMySql.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_list.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_com.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_command.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/my_compress.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/udf_registration_types.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/client_plugin.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/plugin_auth_common.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_version.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_time.h \
+		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
+		../../mysql/mysqlconnpool.h \
+		../../packdef.h \
+		../../../Shared/sharedpackdef.h \
+		../../combatbalance.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
+		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../servermonitorbridge.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QStringList \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstringlist.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMutex \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qmutex.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o servermonitorwindow.o ../../servermonitorwindow.cpp
 
 kcpnet.o: ../../server2/kcpnet.cpp ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QMap \
@@ -1381,14 +1778,21 @@ kcpnet.o: ../../server2/kcpnet.cpp ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDateTime \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
-		../../QtKcp/src/qkcpsocket.h \
-		../../QtKcp/src/qkcpsocket_global.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../servermonitortypes.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
@@ -1402,15 +1806,10 @@ kcpnet.o: ../../server2/kcpnet.cpp ../../server2/kcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRandomGenerator \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrandom.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../core.h \
 		../../Icore.h \
 		../../server2/tcpnet.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
 		../../mysql/CMySql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
@@ -1426,12 +1825,17 @@ kcpnet.o: ../../server2/kcpnet.cpp ../../server2/kcpnet.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
 		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
-		../../QtKcp/src/ikcp.h
+		../../../ThirdParty/QtKcp/src/ikcp.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o kcpnet.o ../../server2/kcpnet.cpp
 
 tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
@@ -1447,8 +1851,6 @@ tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdatetime.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QTimer \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qtimer.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QThreadPool \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthreadpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h \
 		../../server2/INet.h \
@@ -1456,6 +1858,9 @@ tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qthread.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QByteArray \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qbytearray.h \
+		../../../Shared/sharednetconfig.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QObject \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qobject.h \
 		../../core.h \
@@ -1465,8 +1870,13 @@ tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qhostaddress.h \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/QUdpSocket \
 		../../../../Qt/6.9.1/macos/lib/QtNetwork.framework/Headers/qudpsocket.h \
-		../../../../QtKcp/src/qkcpserver.h \
-		../../../../QtKcp/src/qkcpsocket_global.h \
+		../../../ThirdParty/QtKcp/src/qkcpserver.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket_global.h \
+		../../servermonitortypes.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
 		../../mysql/CMySql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
@@ -1482,21 +1892,25 @@ tcpnet.o: ../../server2/tcpnet.cpp ../../server2/tcpnet.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
 		../../mysql/mysqlconnpool.h \
 		../../packdef.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QtGlobal \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qglobal.h \
+		../../../Shared/sharedpackdef.h \
 		../../combatbalance.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QString \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qstring.h \
-		../../packetbuilder.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QVector \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qvector.h \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRandomGenerator \
-		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrandom.h \
+		../../../Shared/sharedcombatbalance.h \
+		../../serverconfig.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QSet \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qset.h \
-		../../../../QtKcp/src/qkcpsocket.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QPointF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qpoint.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRectF \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrect.h \
+		../../packetbuilder.h \
+		../../../Shared/sharedpacketbuilder.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QCoreApplication \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qcoreapplication.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QRandomGenerator \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qrandom.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qelapsedtimer.h \
+		../../../ThirdParty/QtKcp/src/qkcpsocket.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QIODevice \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qiodevice.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o tcpnet.o ../../server2/tcpnet.cpp
@@ -1514,12 +1928,12 @@ CMySql.o: ../../mysql/CMySql.cpp ../../mysql/CMySql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_version.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_time.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
-		../../mysql/MySqlConnPool.h \
+		../../mysql/mysqlconnpool.h \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
 		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CMySql.o ../../mysql/CMySql.cpp
 
-mysqlconnpool.o: ../../mysql/mysqlconnpool.cpp ../../mysql/MySqlConnPool.h \
+mysqlconnpool.o: ../../mysql/mysqlconnpool.cpp ../../mysql/mysqlconnpool.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/field_types.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/my_list.h \
@@ -1531,8 +1945,16 @@ mysqlconnpool.o: ../../mysql/mysqlconnpool.cpp ../../mysql/MySqlConnPool.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql/plugin_auth_common.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_version.h \
 		/usr/local/mysql-8.0.35-macos13-arm64/include/mysql_time.h \
-		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h
+		/usr/local/mysql-8.0.35-macos13-arm64/include/errmsg.h \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/QDebug \
+		../../../../Qt/6.9.1/macos/lib/QtCore.framework/Headers/qdebug.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mysqlconnpool.o ../../mysql/mysqlconnpool.cpp
+
+moc_qkcpserver.o: moc_qkcpserver.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpserver.o moc_qkcpserver.cpp
+
+moc_qkcpsocket.o: moc_qkcpsocket.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpsocket.o moc_qkcpsocket.cpp
 
 moc_INet.o: moc_INet.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_INet.o moc_INet.cpp
@@ -1549,11 +1971,11 @@ moc_Icore.o: moc_Icore.cpp
 moc_core.o: moc_core.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_core.o moc_core.cpp
 
-moc_qkcpserver.o: moc_qkcpserver.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpserver.o moc_qkcpserver.cpp
+moc_servermonitorbridge.o: moc_servermonitorbridge.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_servermonitorbridge.o moc_servermonitorbridge.cpp
 
-moc_qkcpsocket.o: moc_qkcpsocket.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_qkcpsocket.o moc_qkcpsocket.cpp
+moc_servermonitorwindow.o: moc_servermonitorwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_servermonitorwindow.o moc_servermonitorwindow.cpp
 
 ####### Install
 

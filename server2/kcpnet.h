@@ -9,6 +9,7 @@
 #include "INet.h"
 #include <QUdpSocket>
 #include "qkcpserver.h"
+#include "../servermonitortypes.h"
 
 // 前向声明
 QT_FORWARD_DECLARE_CLASS(QKcpSocket);
@@ -79,6 +80,7 @@ public:
      */
     bool sendData(quint64 clientId, const QByteArray& data);
     bool isKcpConnected(quint64 clientId) const;
+    KcpMonitorStats monitorStats() const;
     QTcpSocket* getSocket()  { return nullptr; } // KCP不使用TCP Socket数据
 
     /**
@@ -121,9 +123,10 @@ private:
         QKcpSocket* socket;        // KCP socket指针
     };
     QHash<quint64, KcpClientInfo> kcpClientInfo;  // 客户端ID到KCP信息的映射
+    bool m_listening = false;
+    quint16 m_listenPort = 0;
 
     void updateKcpSockets();
 };
 
 #endif // KCPNET_H
-

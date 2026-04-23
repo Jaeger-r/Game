@@ -8,6 +8,13 @@
 #include <QTcpSocket>
 
 namespace {
+constexpr qsizetype kPacketHeaderSize = static_cast<qsizetype>(sizeof(PacketHeader));
+constexpr quint16 kMaxPacketBytes = 60 * 1024;
+/**
+ * @brief 处理packetCommandLabel相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 QString packetCommandLabel(quint16 cmd)
 {
     switch (cmd) {
@@ -31,33 +38,11 @@ QString packetCommandLabel(quint16 cmd)
 }
 
 
-///逻辑线程池
-class LogicTask : public QRunnable
-{
-public:
-    LogicTask(TCPNet* n, quint64 cid, QByteArray d, quint16 c)
-        : net(n), clientId(cid), data(std::move(d)), cmd(c) {}
-
-    void run() override
-    {
-        if (net) {
-            net->notifyLogicTaskStarted();
-        }
-        QElapsedTimer timer;
-        timer.start();
-        core::getKernel()->dealData(clientId, data);
-        if (net) {
-            net->notifyLogicTaskFinished(cmd, timer.nsecsElapsed());
-        }
-    }
-
-private:
-    TCPNet* net;
-    quint64 clientId;
-    QByteArray data;
-    quint16 cmd;
-};
-
+/**
+ * @brief 构造TCPNet对象并完成基础初始化
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 TCPNet::TCPNet(QObject* parent)
     : INet (parent),
     server(new QTcpServer(this)),
@@ -65,8 +50,6 @@ TCPNet::TCPNet(QObject* parent)
 {
     connect(server, &QTcpServer::newConnection,
             this, &TCPNet::onNewConnection);
-
-    QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount() * 2);
 
     heartbeatTimer = new QTimer();
     connect(heartbeatTimer, &QTimer::timeout,
@@ -80,8 +63,14 @@ TCPNet::TCPNet(QObject* parent)
 }
 
 
+/**
+ * @brief 初始化initNetWork相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 bool TCPNet::initNetWork(const QString& ip, quint16 port)
 {
+    m_listenPort = port;
     if (!server->listen(QHostAddress(ip), port))
     {
         qDebug() << "TCPServer Start Failed:" << server->errorString();
@@ -98,7 +87,7 @@ bool TCPNet::initNetWork(const QString& ip, quint16 port)
         connect((core*)(core::getKernel()),
                 &core::sendToClient,
                 this, &TCPNet::sendData,
-                Qt::QueuedConnection);
+                Qt::DirectConnection);
     }
     else
     {
@@ -107,9 +96,15 @@ bool TCPNet::initNetWork(const QString& ip, quint16 port)
     return true;
 }
 
+/**
+ * @brief 处理unInitNetWork相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::unInitNetWork()
 {
     if (server) server->close();
+    m_listenPort = 0;
 
     for (auto it = idToClientInfo.begin(); it != idToClientInfo.end(); ++it)
     {
@@ -125,6 +120,11 @@ void TCPNet::unInitNetWork()
     socketToId.clear();
 }
 
+/**
+ * @brief 处理onNewConnection相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::onNewConnection()
 {
     QTcpSocket* socket = server->nextPendingConnection();
@@ -149,6 +149,11 @@ void TCPNet::onNewConnection()
     qDebug() << "TCP Client Connected:" << clientId;
 }
 
+/**
+ * @brief 处理onReadyRead相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::onReadyRead()
 {
     QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
@@ -161,12 +166,12 @@ void TCPNet::onReadyRead()
 
     while (true)
     {
-        if (buffer.size() < sizeof(PacketHeader)) return;
+        if (buffer.size() < kPacketHeaderSize) return;
 
         PacketHeader header;
         memcpy(&header, buffer.constData(), sizeof(header));
 
-        if (header.length < sizeof(PacketHeader) || header.length > (64 * 1024))
+        if (header.length < sizeof(PacketHeader) || header.length > kMaxPacketBytes)
         {
             qDebug() << "Invalid packet, disconnect client";
             socket->disconnectFromHost();
@@ -175,8 +180,7 @@ void TCPNet::onReadyRead()
 
         if (buffer.size() < header.length) return;
 
-        QByteArray packet = buffer.left(header.length);
-        buffer.remove(0, header.length);
+        const QByteArray packet = QByteArray::fromRawData(buffer.constData(), header.length);
         m_totalPacketCount.fetch_add(1, std::memory_order_relaxed);
 
         if (header.cmd == _default_protocol_kcp_negotiate_rq)
@@ -219,15 +223,22 @@ void TCPNet::onReadyRead()
         }
         else
         {
-            // 投递到逻辑线程池
-            m_logicQueuedCount.fetch_add(1, std::memory_order_relaxed);
-            LogicTask* task = new LogicTask(this, clientId, packet, header.cmd);
-            task->setAutoDelete(true);
-            QThreadPool::globalInstance()->start(task);
+            notifyLogicTaskStarted();
+            QElapsedTimer timer;
+            timer.start();
+            core::getKernel()->dealData(clientId, packet);
+            notifyLogicTaskFinished(header.cmd, timer.nsecsElapsed());
         }
+
+        buffer.remove(0, header.length);
     }
 }
 
+/**
+ * @brief 处理checkHeartbeat相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::checkHeartbeat()
 {
     JaegerDebug();
@@ -251,6 +262,11 @@ void TCPNet::checkHeartbeat()
     }
 }
 
+/**
+ * @brief 处理kickClient相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::kickClient(quint64 clientId)
 {
     JaegerDebug();
@@ -266,11 +282,21 @@ void TCPNet::kickClient(quint64 clientId)
 
     recycleClientId(clientId);
 
+    if (m_pKcpNet) {
+        m_pKcpNet->removeKcpSocket(clientId);
+    }
+
+    emit clientDisconnected(clientId);
 
     socket->disconnectFromHost();
     socket->deleteLater();
 }
 
+/**
+ * @brief 处理onClientDisconnected相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::onClientDisconnected()
 {
     QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
@@ -293,13 +319,20 @@ void TCPNet::onClientDisconnected()
         if (m_pKcpNet) {
             m_pKcpNet->removeKcpSocket(clientId);
         }
+
+        emit clientDisconnected(clientId);
     }
 
     socket->deleteLater();
 }
 
 //回包（主线程）
-void TCPNet::sendData(quint64 clientId, QByteArray data)
+/**
+ * @brief 发送sendData相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
+void TCPNet::sendData(quint64 clientId, const QByteArray& data)
 {
     //JaegerDebug();
     auto it = idToClientInfo.find(clientId);
@@ -309,12 +342,21 @@ void TCPNet::sendData(quint64 clientId, QByteArray data)
     if (socket->state() == QAbstractSocket::ConnectedState) socket->write(data);
 }
 
+/**
+ * @brief 处理notifyLogicTaskStarted相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::notifyLogicTaskStarted()
 {
-    m_logicQueuedCount.fetch_sub(1, std::memory_order_relaxed);
     m_logicActiveCount.fetch_add(1, std::memory_order_relaxed);
 }
 
+/**
+ * @brief 处理notifyLogicTaskFinished相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::notifyLogicTaskFinished(quint16 cmd, qint64 elapsedNs)
 {
     m_logicActiveCount.fetch_sub(1, std::memory_order_relaxed);
@@ -334,16 +376,18 @@ void TCPNet::notifyLogicTaskFinished(quint16 cmd, qint64 elapsedNs)
         qWarning() << "[Perf] Slow packet"
                    << packetCommandLabel(cmd)
                    << "elapsedMs=" << QString::number(static_cast<double>(safeElapsed) / 1000000.0, 'f', 2)
-                   << "queued=" << m_logicQueuedCount.load(std::memory_order_relaxed)
                    << "active=" << m_logicActiveCount.load(std::memory_order_relaxed);
     }
 }
 
+/**
+ * @brief 处理logRuntimeStats相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
 void TCPNet::logRuntimeStats()
 {
-    QThreadPool* pool = QThreadPool::globalInstance();
     const int onlineConnections = idToClientInfo.size();
-    const int queued = qMax(0, m_logicQueuedCount.load(std::memory_order_relaxed));
     const int active = qMax(0, m_logicActiveCount.load(std::memory_order_relaxed));
     const quint64 totalPackets = m_totalPacketCount.load(std::memory_order_relaxed);
     const quint64 logicPackets = m_logicPacketCount.load(std::memory_order_relaxed);
@@ -361,17 +405,38 @@ void TCPNet::logRuntimeStats()
 
     qInfo().noquote()
         << QStringLiteral("[Monitor] online=%1 totalPackets=%2 (+%3/5s) logicPackets=%4 (+%5/5s) "
-                          "threadPool(active=%6 queued=%7 maxThreads=%8 qtActive=%9) "
-                          "logicAvgMs=%10 logicMaxMs=%11")
+                          "dispatch(active=%6) "
+                          "logicAvgMs=%7 logicMaxMs=%8")
               .arg(onlineConnections)
               .arg(totalPackets)
               .arg(packetDelta)
               .arg(logicPackets)
               .arg(logicDelta)
               .arg(active)
-              .arg(queued)
-              .arg(pool ? pool->maxThreadCount() : 0)
-              .arg(pool ? pool->activeThreadCount() : 0)
               .arg(QString::number(avgLogicMs, 'f', 2))
               .arg(QString::number(maxLogicMs, 'f', 2));
+}
+
+/**
+ * @brief 查询monitorStats相关逻辑
+ * @author Jaeger
+ * @date 2025.3.28
+ */
+TcpMonitorStats TCPNet::monitorStats() const
+{
+    TcpMonitorStats stats;
+    stats.listening = server && server->isListening();
+    stats.port = m_listenPort;
+    stats.onlineConnections = idToClientInfo.size();
+    stats.logicActive = qMax(0, m_logicActiveCount.load(std::memory_order_relaxed));
+    stats.totalPackets = m_totalPacketCount.load(std::memory_order_relaxed);
+    stats.logicPackets = m_logicPacketCount.load(std::memory_order_relaxed);
+
+    const quint64 totalNs = m_logicProcessingTotalNs.load(std::memory_order_relaxed);
+    const quint64 maxNs = m_logicProcessingMaxNs.load(std::memory_order_relaxed);
+    stats.averageLogicMs = stats.logicPackets > 0
+                               ? static_cast<double>(totalNs) / static_cast<double>(stats.logicPackets) / 1000000.0
+                               : 0.0;
+    stats.maxLogicMs = static_cast<double>(maxNs) / 1000000.0;
+    return stats;
 }

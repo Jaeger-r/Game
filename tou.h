@@ -1,22 +1,23 @@
 #ifndef TOU_H
 #define TOU_H
 
-#define HOSTIP "127.0.0.1"
-#define HOSTPORT 1234
-
 #include <QTcpSocket>
 #include <QTcpServer>
 #include <qthread.h>
 #include <map>
 #include <QByteArray>
 #include <QDateTime>
+#include "sharednetconfig.h"
+
+#define HOSTIP JaegerShared::kDefaultServerIp
+#define HOSTPORT JaegerShared::kDefaultTcpPortImportantData
 
 enum PlayerDirection{ n,w,e,s,nw,ne,sw,se };
 
 // 网络端口配置
-#define TCP_PORT_IMPORTANT_DATA  1234  // TCP端口：处理重要数据（登录、交易、关键操作等）
-#define KCP_PORT_REALTIME_MOVE   1235  // KCP端口：处理实时移动（玩家位置、游戏状态同步等）
-#define SERVER_IP_LOCATION "127.0.0.1"
+#define TCP_PORT_IMPORTANT_DATA  JaegerShared::kDefaultTcpPortImportantData  // TCP端口：处理重要数据（登录、交易、关键操作等）
+#define KCP_PORT_REALTIME_MOVE   JaegerShared::kDefaultKcpPortRealtimeMove   // KCP端口：处理实时移动（玩家位置、游戏状态同步等）
+#define SERVER_IP_LOCATION JaegerShared::kDefaultServerIp
 #define DEBUG
 
 #ifdef DEBUG

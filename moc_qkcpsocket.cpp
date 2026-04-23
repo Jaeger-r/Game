@@ -89,8 +89,8 @@ void QKcpSocket::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 0: _t->connected(); break;
         case 1: _t->disconnected(); break;
         case 2: _t->deleteFromHost((*reinterpret_cast< std::add_pointer_t<QHostAddress>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<quint16>>(_a[2])), QPrivateSignal()); break;
-        case 3: _t->d_func()->_kcp_update(); break;
-        case 4: _t->d_func()->_read_udp_data(); break;
+        case 3: _t->_kcp_update(); break;
+        case 4: _t->_read_udp_data(); break;
         default: ;
         }
     }

@@ -13,7 +13,7 @@ public:
 public:
     virtual bool open() = 0;
     virtual void close() = 0;
-    virtual void dealData(quint64 clientId, QByteArray data) = 0;
+    virtual void dealData(quint64 clientId, const QByteArray& data) = 0;
 };
 
 #endif // ICORE_H

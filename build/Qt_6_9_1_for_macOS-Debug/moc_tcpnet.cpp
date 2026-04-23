@@ -39,29 +39,34 @@ template <> constexpr inline auto TCPNet::qt_create_metaobjectdata<qt_meta_tag_Z
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "TCPNet",
-        "onNewConnection",
+        "clientDisconnected",
         "",
+        "clientId",
+        "onNewConnection",
         "onReadyRead",
         "onClientDisconnected",
         "sendData",
-        "clientId",
         "data",
         "logRuntimeStats"
     };
 
     QtMocHelpers::UintData qt_methods {
+        // Signal 'clientDisconnected'
+        QtMocHelpers::SignalData<void(quint64)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::ULongLong, 3 },
+        }}),
         // Slot 'onNewConnection'
-        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onReadyRead'
-        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onClientDisconnected'
         QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onReadyRead'
+        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onClientDisconnected'
+        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'sendData'
-        QtMocHelpers::SlotData<void(quint64, QByteArray)>(5, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::ULongLong, 6 }, { QMetaType::QByteArray, 7 },
+        QtMocHelpers::SlotData<void(quint64, const QByteArray &)>(7, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::ULongLong, 3 }, { QMetaType::QByteArray, 8 },
         }}),
         // Slot 'logRuntimeStats'
-        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -85,13 +90,18 @@ void TCPNet::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void
     auto *_t = static_cast<TCPNet *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->onNewConnection(); break;
-        case 1: _t->onReadyRead(); break;
-        case 2: _t->onClientDisconnected(); break;
-        case 3: _t->sendData((*reinterpret_cast< std::add_pointer_t<quint64>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QByteArray>>(_a[2]))); break;
-        case 4: _t->logRuntimeStats(); break;
+        case 0: _t->clientDisconnected((*reinterpret_cast< std::add_pointer_t<quint64>>(_a[1]))); break;
+        case 1: _t->onNewConnection(); break;
+        case 2: _t->onReadyRead(); break;
+        case 3: _t->onClientDisconnected(); break;
+        case 4: _t->sendData((*reinterpret_cast< std::add_pointer_t<quint64>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QByteArray>>(_a[2]))); break;
+        case 5: _t->logRuntimeStats(); break;
         default: ;
         }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (TCPNet::*)(quint64 )>(_a, &TCPNet::clientDisconnected, 0))
+            return;
     }
 }
 
@@ -114,15 +124,21 @@ int TCPNet::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 5)
+        if (_id < 6)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 5;
+        _id -= 6;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 5)
+        if (_id < 6)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 5;
+        _id -= 6;
     }
     return _id;
+}
+
+// SIGNAL 0
+void TCPNet::clientDisconnected(quint64 _t1)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
 }
 QT_WARNING_POP

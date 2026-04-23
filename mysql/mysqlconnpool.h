@@ -2,7 +2,7 @@
 #define MYSQLCONNPOOL_H
 #pragma once
 
-#include "/usr/local/mysql-8.0.35-macos13-arm64/include/mysql.h"
+#include <mysql.h>
 #include <vector>
 #include <mutex>
 #include <condition_variable>
@@ -19,6 +19,7 @@ public:
               const std::string& user,
               const std::string& pass,
               const std::string& db,
+              unsigned int port,
               int poolSize);
 
     MYSQL* acquire();
@@ -47,6 +48,7 @@ private:
     std::string m_user;
     std::string m_pass;
     std::string m_db;
+    unsigned int m_port = 3306;
 };
 
 /*

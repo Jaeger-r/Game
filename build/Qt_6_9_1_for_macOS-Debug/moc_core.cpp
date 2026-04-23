@@ -48,11 +48,11 @@ template <> constexpr inline auto core::qt_create_metaobjectdata<qt_meta_tag_ZN4
 
     QtMocHelpers::UintData qt_methods {
         // Signal 'sendToClient'
-        QtMocHelpers::SignalData<void(quint64, QByteArray)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+        QtMocHelpers::SignalData<void(quint64, const QByteArray &)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::ULongLong, 3 }, { QMetaType::QByteArray, 4 },
         }}),
         // Signal 'sendToClientKcp'
-        QtMocHelpers::SignalData<void(quint64, QByteArray)>(5, 2, QMC::AccessPublic, QMetaType::Void, {{
+        QtMocHelpers::SignalData<void(quint64, const QByteArray &)>(5, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::ULongLong, 3 }, { QMetaType::QByteArray, 4 },
         }}),
     };
@@ -84,9 +84,9 @@ void core::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void *
         }
     }
     if (_c == QMetaObject::IndexOfMethod) {
-        if (QtMocHelpers::indexOfMethod<void (core::*)(quint64 , QByteArray )>(_a, &core::sendToClient, 0))
+        if (QtMocHelpers::indexOfMethod<void (core::*)(quint64 , const QByteArray & )>(_a, &core::sendToClient, 0))
             return;
-        if (QtMocHelpers::indexOfMethod<void (core::*)(quint64 , QByteArray )>(_a, &core::sendToClientKcp, 1))
+        if (QtMocHelpers::indexOfMethod<void (core::*)(quint64 , const QByteArray & )>(_a, &core::sendToClientKcp, 1))
             return;
     }
 }
@@ -123,13 +123,13 @@ int core::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void core::sendToClient(quint64 _t1, QByteArray _t2)
+void core::sendToClient(quint64 _t1, const QByteArray & _t2)
 {
     QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1, _t2);
 }
 
 // SIGNAL 1
-void core::sendToClientKcp(quint64 _t1, QByteArray _t2)
+void core::sendToClientKcp(quint64 _t1, const QByteArray & _t2)
 {
     QMetaObject::activate<void>(this, &staticMetaObject, 1, nullptr, _t1, _t2);
 }

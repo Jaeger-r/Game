@@ -7,12 +7,12 @@
 #include <QHash>
 #include <QDateTime>
 #include <QTimer>
-#include <QThreadPool>
 #include <QDebug>
 #include <string.h>
 #include <atomic>
 #include "INet.h"
 #include "core.h"
+#include "../servermonitortypes.h"
 #include <QVector>
 #include <qkcpserver.h>
 
@@ -55,6 +55,7 @@ public:
     {
         return clientIds;
     }
+    TcpMonitorStats monitorStats() const;
 
     QTcpSocket* getSocket(quint64 clientId) {
         if (idToClientInfo.contains(clientId)) {
@@ -66,8 +67,11 @@ private slots:
     void onNewConnection();
     void onReadyRead();
     void onClientDisconnected();
-    void sendData(quint64 clientId, QByteArray data);
+    void sendData(quint64 clientId, const QByteArray& data);
     void logRuntimeStats();
+
+signals:
+    void clientDisconnected(quint64 clientId);
 
 private:
 
@@ -89,7 +93,6 @@ private:
 
     QTimer* heartbeatTimer;
     QTimer* monitorTimer = nullptr;
-    std::atomic<int> m_logicQueuedCount{0};
     std::atomic<int> m_logicActiveCount{0};
     std::atomic<quint64> m_totalPacketCount{0};
     std::atomic<quint64> m_logicPacketCount{0};
@@ -97,6 +100,7 @@ private:
     std::atomic<quint64> m_logicProcessingMaxNs{0};
     quint64 m_lastLoggedPacketCount = 0;
     quint64 m_lastLoggedLogicPacketCount = 0;
+    quint16 m_listenPort = 0;
 
 };
 
