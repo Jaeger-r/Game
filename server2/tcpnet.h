@@ -12,7 +12,7 @@
 #include <atomic>
 #include "INet.h"
 #include "core.h"
-#include "../servermonitortypes.h"
+#include "servermonitortypes.h"
 #include <QVector>
 #include <qkcpserver.h>
 

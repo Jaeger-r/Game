@@ -9,7 +9,7 @@
 #include "INet.h"
 #include <QUdpSocket>
 #include "qkcpserver.h"
-#include "../servermonitortypes.h"
+#include "servermonitortypes.h"
 
 // 前向声明
 QT_FORWARD_DECLARE_CLASS(QKcpSocket);

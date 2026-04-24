@@ -17,20 +17,22 @@ CONFIG += jaeger_force_shared_sources qtkcp_force_shared_sources
 include(../Shared/JaegerShared.pri)
 include(../ThirdParty/QtKcp/QtKcp.pri)
 
+INCLUDEPATH += $$PWD/include
+
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        core.cpp \
-        main.cpp \
-        serverconfig.cpp \
-        serverupdatemanager.cpp \
-        servermonitorbridge.cpp
+        src/core.cpp \
+        src/main.cpp \
+        src/serverconfig.cpp \
+        src/serverupdatemanager.cpp \
+        src/servermonitorbridge.cpp
 
 !contains(DEFINES, JAEGER_HEADLESS_BUILD) {
     SOURCES += \
-        servermonitorwindow.cpp
+        src/servermonitorwindow.cpp
 }
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -41,19 +43,20 @@ include(./server2/server2.pri)
 include(./mysql/mysql.pri)
 
 HEADERS += \
-    Icore.h \
-    core.h \
-    packdef.h \
-    packetbuilder.h \
-    serverconfig.h \
-    serverupdatemanager.h \
-    servermonitorbridge.h \
-    servermonitortypes.h \
-    tou.h
+    include/Icore.h \
+    include/combatbalance.h \
+    include/core.h \
+    include/packdef.h \
+    include/packetbuilder.h \
+    include/serverconfig.h \
+    include/serverupdatemanager.h \
+    include/servermonitorbridge.h \
+    include/servermonitortypes.h \
+    include/tou.h
 
 !contains(DEFINES, JAEGER_HEADLESS_BUILD) {
     HEADERS += \
-        servermonitorwindow.h
+        include/servermonitorwindow.h
 }
 
 TINYXML2_ROOT = $$(TINYXML2_ROOT)
