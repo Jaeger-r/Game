@@ -13,8 +13,9 @@ apt-get install -y \
   build-essential \
   qt6-base-dev \
   qt6-base-dev-tools \
-  libqt6sql6-mysql \
-  libmysqlclient-dev \
+  postgresql \
+  postgresql-client \
+  libpq-dev \
   libtinyxml2-dev \
   rsync \
   pkg-config

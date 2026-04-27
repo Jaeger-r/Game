@@ -1,5 +1,9 @@
 QT += core network sql
 
+equals($$clean_path($$PWD), $$clean_path($$OUT_PWD)) {
+    error(GameServer does not support in-source builds. Remove generated files from $$PWD and use a shadow build directory such as $$PWD/build/Qt_6_9_1_for_macOS-Debug.)
+}
+
 contains(CONFIG, JAEGER_HEADLESS_BUILD) {
     DEFINES += JAEGER_HEADLESS_BUILD
     QT -= gui widgets
@@ -13,6 +17,20 @@ contains(CONFIG, JAEGER_HEADLESS_BUILD) {
 
 CONFIG += c++17
 CONFIG += jaeger_force_shared_sources qtkcp_force_shared_sources
+
+OBJECTS_DIR = $$OUT_PWD/obj
+MOC_DIR = $$OUT_PWD/moc
+UI_DIR = $$OUT_PWD/ui
+RCC_DIR = $$OUT_PWD/rcc
+
+QMAKE_CLEAN += \
+    $$PWD/Makefile \
+    $$PWD/moc_predefs.h \
+    $$files($$PWD/*.o) \
+    $$files($$PWD/moc_*.cpp) \
+    $$files($$PWD/moc_*.o) \
+    $$files($$PWD/ui_*.h) \
+    $$files($$PWD/qrc_*.cpp)
 
 include(../Shared/JaegerShared.pri)
 include(../ThirdParty/QtKcp/QtKcp.pri)
@@ -60,15 +78,28 @@ HEADERS += \
 }
 
 TINYXML2_ROOT = $$(TINYXML2_ROOT)
+TINYXML2_INCLUDE_DIR = $$(TINYXML2_INCLUDE_DIR)
+TINYXML2_LIB_DIR = $$(TINYXML2_LIB_DIR)
 
 isEmpty(TINYXML2_ROOT) {
-    macx: TINYXML2_ROOT = /opt/homebrew/Cellar/tinyxml2/11.0.0
+    macx:exists(/opt/homebrew/opt/tinyxml2): TINYXML2_ROOT = /opt/homebrew/opt/tinyxml2
 }
 
-!isEmpty(TINYXML2_ROOT) {
-    INCLUDEPATH += $$TINYXML2_ROOT/include
-    LIBS += -L$$TINYXML2_ROOT/lib -ltinyxml2
-    macx: QMAKE_RPATHDIR += $$TINYXML2_ROOT/lib
+isEmpty(TINYXML2_INCLUDE_DIR):!isEmpty(TINYXML2_ROOT) {
+    TINYXML2_INCLUDE_DIR = $$TINYXML2_ROOT/include
+}
+
+isEmpty(TINYXML2_LIB_DIR):!isEmpty(TINYXML2_ROOT) {
+    TINYXML2_LIB_DIR = $$TINYXML2_ROOT/lib
+}
+
+exists($$TINYXML2_INCLUDE_DIR/tinyxml2.h) {
+    INCLUDEPATH += $$TINYXML2_INCLUDE_DIR
+}
+
+!isEmpty(TINYXML2_LIB_DIR) {
+    LIBS += -L$$TINYXML2_LIB_DIR -ltinyxml2
+    macx: QMAKE_RPATHDIR += $$TINYXML2_LIB_DIR
 } else {
     LIBS += -ltinyxml2
 }

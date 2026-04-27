@@ -7,9 +7,9 @@
     "dataDir": "/opt/jaeger-server/data",
     "logDir": "/opt/jaeger-server/logs"
   },
-  "mysql": {
+  "postgres": {
     "host": "127.0.0.1",
-    "port": 3306,
+    "port": 5432,
     "user": "jaeger_server",
     "password": "replace_me",
     "database": "disk",

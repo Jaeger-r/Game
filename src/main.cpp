@@ -153,19 +153,19 @@ int main(int argc, char *argv[]) {
 
     try {
         MySqlConnPool::Instance().init(
-            runtimeConfig.mysqlHost.toStdString(),
-            runtimeConfig.mysqlUser.toStdString(),
-            runtimeConfig.mysqlPassword.toStdString(),
-            runtimeConfig.mysqlDatabase.toStdString(),
-            runtimeConfig.mysqlPort,
-            runtimeConfig.mysqlPoolSize
+            runtimeConfig.postgresHost.toStdString(),
+            runtimeConfig.postgresUser.toStdString(),
+            runtimeConfig.postgresPassword.toStdString(),
+            runtimeConfig.postgresDatabase.toStdString(),
+            runtimeConfig.postgresPort,
+            runtimeConfig.postgresPoolSize
             );
     } catch (const std::exception& ex) {
-        qCritical().noquote() << QStringLiteral("Failed to initialize MySQL pool: %1")
+        qCritical().noquote() << QStringLiteral("Failed to initialize PostgreSQL pool: %1")
                                      .arg(QString::fromLocal8Bit(ex.what()));
         return 1;
     } catch (...) {
-        qCritical() << "Failed to initialize MySQL pool due to unknown exception.";
+        qCritical() << "Failed to initialize PostgreSQL pool due to unknown exception.";
         return 1;
     }
 

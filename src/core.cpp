@@ -116,6 +116,12 @@ QString escapedSqlString(QString value)
     return value;
 }
 
+QString quotedIdentifier(QString value)
+{
+    value.replace('"', QStringLiteral("\"\""));
+    return QStringLiteral("\"%1\"").arg(value);
+}
+
 bool querySchemaColumnExists(CMySql& sql,
                              const QString& tableName,
                              const QString& columnName,
@@ -123,8 +129,8 @@ bool querySchemaColumnExists(CMySql& sql,
 {
     std::list<std::string> result;
     const QString query =
-        QStringLiteral("SELECT COUNT(*) FROM information_schema.COLUMNS "
-                       "WHERE TABLE_SCHEMA = DATABASE() "
+        QStringLiteral("SELECT COUNT(*) FROM information_schema.columns "
+                       "WHERE table_schema = current_schema() "
                        "AND TABLE_NAME = '%1' "
                        "AND COLUMN_NAME = '%2';")
             .arg(escapedSqlString(tableName), escapedSqlString(columnName));
@@ -153,7 +159,7 @@ bool ensureSchemaColumnExists(CMySql& sql,
 
     const QString alterSql =
         QStringLiteral("ALTER TABLE %1 ADD COLUMN %2 %3;")
-            .arg(tableName, columnName, columnDefinition);
+            .arg(quotedIdentifier(tableName), quotedIdentifier(columnName), columnDefinition);
     return updateQuery(sql, alterSql);
 }
 
@@ -164,10 +170,10 @@ bool querySchemaIndexExists(CMySql& sql,
 {
     std::list<std::string> result;
     const QString query =
-        QStringLiteral("SELECT COUNT(*) FROM information_schema.STATISTICS "
-                       "WHERE TABLE_SCHEMA = DATABASE() "
-                       "AND TABLE_NAME = '%1' "
-                       "AND INDEX_NAME = '%2';")
+        QStringLiteral("SELECT COUNT(*) FROM pg_indexes "
+                       "WHERE schemaname = current_schema() "
+                       "AND tablename = '%1' "
+                       "AND indexname = '%2';")
             .arg(escapedSqlString(tableName), escapedSqlString(indexName));
     if (!selectQuery(sql, query, 1, result)) {
         return false;
@@ -193,8 +199,8 @@ bool ensureSchemaIndexExists(CMySql& sql,
     }
 
     const QString alterSql =
-        QStringLiteral("ALTER TABLE %1 ADD %2;")
-            .arg(tableName, indexDefinition);
+        QStringLiteral("CREATE INDEX %1 ON %2 %3;")
+            .arg(quotedIdentifier(indexName), quotedIdentifier(tableName), indexDefinition);
     return updateQuery(sql, alterSql);
 }
 
@@ -489,7 +495,8 @@ bool appendPendingInventoryJournalEntry(CMySql& sql,
         sql,
         "INSERT INTO user_inventory_journal "
         "(u_id, state_version, action_key, payload_json, status, attempt_count, last_error, applied_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        "RETURNING journal_id;",
         sqlParams(userId,
                   static_cast<int>(stateVersion),
                   utf8StdString(action.trimmed()),
@@ -523,7 +530,7 @@ bool markInventoryJournalSuperseded(CMySql& sql, quint64 journalId)
     return updatePreparedQuery(
         sql,
         "UPDATE user_inventory_journal "
-        "SET status = ?, last_error = ?, applied_at = IFNULL(applied_at, CURRENT_TIMESTAMP) "
+        "SET status = ?, last_error = ?, applied_at = COALESCE(applied_at, CURRENT_TIMESTAMP) "
         "WHERE journal_id = ?;",
         sqlParams(utf8StdString(QString::fromUtf8(kInventoryJournalStatusSuperseded)),
                   CMySql::Param::null(),
@@ -716,8 +723,9 @@ bool upsertWarehouseUnlockProgressState(CMySql& sql,
         "INSERT INTO user_progress_state "
         "(u_id, map_id, quest_step, warehouse_unlock_tier, pos_x, pos_y) "
         "VALUES (?, ?, ?, ?, ?, ?) "
-        "ON DUPLICATE KEY UPDATE "
-        "warehouse_unlock_tier = VALUES(warehouse_unlock_tier);",
+        "ON CONFLICT (u_id) DO UPDATE SET "
+        "warehouse_unlock_tier = EXCLUDED.warehouse_unlock_tier, "
+        "updated_at = CURRENT_TIMESTAMP;",
         sqlParams(userId,
                   utf8StdString(mapId),
                   0,
@@ -739,12 +747,13 @@ bool upsertPlayerProgressState(CMySql& sql,
         "INSERT INTO user_progress_state "
         "(u_id, map_id, quest_step, warehouse_unlock_tier, pos_x, pos_y) "
         "VALUES (?, ?, ?, ?, ?, ?) "
-        "ON DUPLICATE KEY UPDATE "
-        "map_id = VALUES(map_id), "
-        "quest_step = VALUES(quest_step), "
-        "warehouse_unlock_tier = VALUES(warehouse_unlock_tier), "
-        "pos_x = VALUES(pos_x), "
-        "pos_y = VALUES(pos_y);",
+        "ON CONFLICT (u_id) DO UPDATE SET "
+        "map_id = EXCLUDED.map_id, "
+        "quest_step = EXCLUDED.quest_step, "
+        "warehouse_unlock_tier = EXCLUDED.warehouse_unlock_tier, "
+        "pos_x = EXCLUDED.pos_x, "
+        "pos_y = EXCLUDED.pos_y, "
+        "updated_at = CURRENT_TIMESTAMP;",
         sqlParams(userId,
                   utf8StdString(mapId),
                   questStep,
@@ -2298,7 +2307,7 @@ bool persistItemTableEntries(CMySql& sql,
 
     const QString upsertQuery =
         QStringLiteral("INSERT INTO %1 (u_id, item_id, item_count) VALUES (?, ?, ?) "
-                       "ON DUPLICATE KEY UPDATE item_count = VALUES(item_count);")
+                       "ON CONFLICT (u_id, item_id) DO UPDATE SET item_count = EXCLUDED.item_count;")
             .arg(tableName);
     for (auto it = nextCounts.constBegin(); it != nextCounts.constEnd(); ++it) {
         if (currentCounts.value(it.key(), 0) == it.value()) {
@@ -2324,15 +2333,15 @@ bool persistEquipmentStateBatch(CMySql& sql, int userId, const Player_Informatio
                 "(u_id, slot_index, item_id, enhance_level, forge_level, enchant_kind, enchant_value, "
                 "enhance_success_count, forge_success_count, enchant_success_count) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-                "ON DUPLICATE KEY UPDATE "
-                "item_id = VALUES(item_id), "
-                "enhance_level = VALUES(enhance_level), "
-                "forge_level = VALUES(forge_level), "
-                "enchant_kind = VALUES(enchant_kind), "
-                "enchant_value = VALUES(enchant_value), "
-                "enhance_success_count = VALUES(enhance_success_count), "
-                "forge_success_count = VALUES(forge_success_count), "
-                "enchant_success_count = VALUES(enchant_success_count);",
+                "ON CONFLICT (u_id, slot_index) DO UPDATE SET "
+                "item_id = EXCLUDED.item_id, "
+                "enhance_level = EXCLUDED.enhance_level, "
+                "forge_level = EXCLUDED.forge_level, "
+                "enchant_kind = EXCLUDED.enchant_kind, "
+                "enchant_value = EXCLUDED.enchant_value, "
+                "enhance_success_count = EXCLUDED.enhance_success_count, "
+                "forge_success_count = EXCLUDED.forge_success_count, "
+                "enchant_success_count = EXCLUDED.enchant_success_count;",
                 sqlParams(userId,
                           slotIndex,
                           playerInfo.equippedItemIds[slotIndex],
@@ -2818,6 +2827,7 @@ bool core::open() {
     // ---------------- DB ----------------
     out << "-> Database: ";
     dbOk = CheckDB();
+    if (dbOk) {dbOk = ensureCoreAccountTables();}
     if (dbOk) {dbOk = ensureUserCredentialSchema();}
     if (dbOk) {dbOk = ensurePlayerStatColumns();}
     if (dbOk) {dbOk = ensureEquipmentColumns();}
@@ -2855,6 +2865,74 @@ bool core::open() {
 }
 
 /**
+ * @brief 程序启动时确保核心账号与基础角色表存在。
+ * @author Jaeger
+ * @date 2026.4.27
+ */
+bool core::ensureCoreAccountTables()
+{
+    CMySql sql;
+
+    const char* accountTableSql =
+        "CREATE TABLE IF NOT EXISTS user_account ("
+        "u_id SERIAL PRIMARY KEY, "
+        "u_name VARCHAR(64) NOT NULL UNIQUE, "
+        "u_password VARCHAR(96) NOT NULL, "
+        "u_tel BIGINT NOT NULL UNIQUE"
+        ");";
+    if (!sql.UpdateMySql(accountTableSql)) {
+        return false;
+    }
+
+    const char* basicInfoTableSql =
+        "CREATE TABLE IF NOT EXISTS user_basic_information ("
+        "u_id INT PRIMARY KEY REFERENCES user_account(u_id) ON DELETE CASCADE, "
+        "u_name VARCHAR(64) NOT NULL, "
+        "u_health INT NOT NULL DEFAULT 100, "
+        "u_mana INT NOT NULL DEFAULT 0, "
+        "u_attackpower INT NOT NULL DEFAULT 0, "
+        "u_magicattack INT NOT NULL DEFAULT 0, "
+        "u_independentattack INT NOT NULL DEFAULT 0, "
+        "u_attackrange INT NOT NULL DEFAULT 0, "
+        "u_experience BIGINT NOT NULL DEFAULT 0, "
+        "u_level INT NOT NULL DEFAULT 1, "
+        "u_defence INT NOT NULL DEFAULT 0, "
+        "u_magicdefence INT NOT NULL DEFAULT 0, "
+        "u_strength INT NOT NULL DEFAULT 0, "
+        "u_intelligence INT NOT NULL DEFAULT 0, "
+        "u_vitality INT NOT NULL DEFAULT 0, "
+        "u_spirit INT NOT NULL DEFAULT 0, "
+        "u_critrate FLOAT NOT NULL DEFAULT 0, "
+        "u_magiccritrate FLOAT NOT NULL DEFAULT 0, "
+        "u_critdamage FLOAT NOT NULL DEFAULT 0, "
+        "u_attackspeed FLOAT NOT NULL DEFAULT 0, "
+        "u_movespeed FLOAT NOT NULL DEFAULT 0, "
+        "u_castspeed FLOAT NOT NULL DEFAULT 0, "
+        "u_position_x FLOAT NOT NULL DEFAULT 100, "
+        "u_position_y FLOAT NOT NULL DEFAULT 100, "
+        "u_equipment_weapon INT NOT NULL DEFAULT 0, "
+        "u_equipment_head INT NOT NULL DEFAULT 0, "
+        "u_equipment_body INT NOT NULL DEFAULT 0, "
+        "u_equipment_legs INT NOT NULL DEFAULT 0, "
+        "u_equipment_hands INT NOT NULL DEFAULT 0, "
+        "u_equipment_shoes INT NOT NULL DEFAULT 0, "
+        "u_equipment_shield INT NOT NULL DEFAULT 0"
+        ");";
+    if (!sql.UpdateMySql(basicInfoTableSql)) {
+        return false;
+    }
+
+    const char* userItemTableSql =
+        "CREATE TABLE IF NOT EXISTS user_item ("
+        "u_id INT NOT NULL REFERENCES user_account(u_id) ON DELETE CASCADE, "
+        "item_id INT NOT NULL, "
+        "item_count INT NOT NULL DEFAULT 0, "
+        "PRIMARY KEY (u_id, item_id)"
+        ");";
+    return sql.UpdateMySql(userItemTableSql);
+}
+
+/**
  * @brief 程序启动/初始化时自动检查数据库 user 表的密码字段是否满足新密码存储要求，不满足就自动升级表结构。
  * @author Jaeger
  * @date 2025.3.28
@@ -2865,24 +2943,24 @@ bool core::ensureUserCredentialSchema()
     std::list<std::string> result;
     bool passwordColumnExists = false;
     if (!querySchemaColumnExists(sql,
-                                 QStringLiteral("user"),
+                                 QStringLiteral("user_account"),
                                  QStringLiteral("u_password"),
                                  &passwordColumnExists))
     {
         return false;
     }
     if (!passwordColumnExists) {
-        qWarning() << "user.u_password column is missing; cannot validate credential schema.";
+        qWarning() << "user_account.u_password column is missing; cannot validate credential schema.";
         return false;
     }
 
     result.clear();
     const QString lengthQuery =
-        QStringLiteral("SELECT IFNULL(CHARACTER_MAXIMUM_LENGTH, 0) "
-                       "FROM information_schema.COLUMNS "
-                       "WHERE TABLE_SCHEMA = DATABASE() "
-                       "AND TABLE_NAME = 'user' "
-                       "AND COLUMN_NAME = 'u_password';");
+        QStringLiteral("SELECT COALESCE(character_maximum_length, 0) "
+                       "FROM information_schema.columns "
+                       "WHERE table_schema = current_schema() "
+                       "AND table_name = 'user_account' "
+                       "AND column_name = 'u_password';");
     if (!selectQuery(sql, lengthQuery, 1, result)) {
         return false;
     }
@@ -2891,7 +2969,7 @@ bool core::ensureUserCredentialSchema()
     const int currentLength =
         !result.empty() ? QString::fromStdString(result.front()).toInt(&ok) : 0;
     if (!ok) {
-        qWarning() << "Failed to parse user.u_password column length from information_schema.";
+        qWarning() << "Failed to parse user_account.u_password column length from information_schema.";
         return false;
     }
 
@@ -2901,14 +2979,14 @@ bool core::ensureUserCredentialSchema()
     }
 
     const QString alterSql =
-        QStringLiteral("ALTER TABLE user MODIFY COLUMN u_password VARCHAR(%1) NOT NULL;")
+        QStringLiteral("ALTER TABLE user_account ALTER COLUMN u_password TYPE VARCHAR(%1);")
             .arg(kRequiredPasswordLength);
     if (!updateQuery(sql, alterSql)) {
-        qWarning() << "Failed to expand user.u_password column to store hashed passwords.";
+        qWarning() << "Failed to expand user_account.u_password column to store hashed passwords.";
         return false;
     }
 
-    qDebug() << "Expanded user.u_password column from"
+    qDebug() << "Expanded user_account.u_password column from"
              << currentLength
              << "to"
              << kRequiredPasswordLength;
@@ -4909,7 +4987,7 @@ bool core::ensureProgressStateTable()
         "warehouse_unlock_tier INT NOT NULL DEFAULT 1, "
         "pos_x FLOAT NOT NULL DEFAULT 100, "
         "pos_y FLOAT NOT NULL DEFAULT 100, "
-        "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        "updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ");";
     if (!sql.UpdateMySql(createSql)) {
         return false;
@@ -4944,16 +5022,16 @@ bool core::ensureInventoryJournalTable()
     CMySql sql;
     const char* createSql =
         "CREATE TABLE IF NOT EXISTS user_inventory_journal ("
-        "journal_id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+        "journal_id BIGSERIAL PRIMARY KEY, "
         "u_id INT NOT NULL, "
         "state_version INT NOT NULL DEFAULT 0, "
         "action_key VARCHAR(64) NOT NULL, "
-        "payload_json LONGTEXT NOT NULL, "
+        "payload_json TEXT NOT NULL, "
         "status VARCHAR(16) NOT NULL DEFAULT 'pending', "
         "attempt_count INT NOT NULL DEFAULT 0, "
         "last_error VARCHAR(255) NULL, "
-        "applied_at TIMESTAMP NULL DEFAULT NULL, "
-        "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        "applied_at TIMESTAMPTZ NULL DEFAULT NULL, "
+        "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ");";
     if (!sql.UpdateMySql(createSql)) {
         return false;
@@ -4980,13 +5058,13 @@ bool core::ensureInventoryJournalTable()
     if (!ensureSchemaColumnExists(sql,
                                   QStringLiteral("user_inventory_journal"),
                                   QStringLiteral("applied_at"),
-                                  QStringLiteral("TIMESTAMP NULL DEFAULT NULL"))) {
+                                  QStringLiteral("TIMESTAMPTZ NULL DEFAULT NULL"))) {
         return false;
     }
     if (!ensureSchemaIndexExists(sql,
                                  QStringLiteral("user_inventory_journal"),
                                  QStringLiteral("idx_inventory_journal_status"),
-                                 QStringLiteral("INDEX idx_inventory_journal_status (status, created_at)"))) {
+                                 QStringLiteral("(status, created_at)"))) {
         return false;
     }
     updateQuery(sql,
@@ -5006,8 +5084,8 @@ InventoryJournalVersionState core::loadInventoryJournalVersionState(int playerId
     CMySql sql;
     std::list<std::string> result;
     if (selectPreparedQuery(sql,
-                            "SELECT IFNULL(MAX(state_version), 0), "
-                            "IFNULL(MAX(CASE WHEN status = 'applied' THEN state_version ELSE 0 END), 0) "
+                            "SELECT COALESCE(MAX(state_version), 0), "
+                            "COALESCE(MAX(CASE WHEN status = 'applied' THEN state_version ELSE 0 END), 0) "
                             "FROM user_inventory_journal WHERE u_id = ?;",
                             sqlParams(playerId),
                             2,
@@ -5493,7 +5571,7 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
 
     //查手机号
     if (!selectPreparedQuery(mysql,
-                             "select u_id from user where u_tel = ?;",
+                             "select u_id from user_account where u_tel = ?;",
                              sqlParams(rawTel),
                              1,
                              result))
@@ -5506,7 +5584,7 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
 
     //查用户名
     if (!selectPreparedQuery(mysql,
-                             "select u_id from user where u_name = ?;",
+                             "select u_id from user_account where u_name = ?;",
                              sqlParams(utf8StdString(rawUserName)),
                              1,
                              result))
@@ -5526,7 +5604,7 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
 
     //插入用户
     if (!updatePreparedQuery(mysql,
-                             "insert into user(u_name, u_password, u_tel) values(?, ?, ?);",
+                             "insert into user_account(u_name, u_password, u_tel) values(?, ?, ?) returning u_id;",
                              sqlParams(utf8StdString(rawUserName),
                                        utf8StdString(passwordHash),
                                        rawTel)))
@@ -5598,7 +5676,8 @@ RegisterError core::DoRegister(STRU_REGISTER_RQ* rq)
                 mysql,
                 "INSERT INTO user_item (u_id, item_id, item_count) "
                 "VALUES (?, ?, ?) "
-                "ON DUPLICATE KEY UPDATE item_count = item_count + VALUES(item_count);",
+                "ON CONFLICT (u_id, item_id) DO UPDATE SET "
+                "item_count = user_item.item_count + EXCLUDED.item_count;",
                 sqlParams(user_id, item.first, item.second))) {
             return rollbackAndReturn(REG_INSERT_FAIL);
         }
@@ -5680,7 +5759,7 @@ void core::Login_Request(quint64 clientId, STRU_LOGIN_RQ* rq)
     const QString rawUserName = QString::fromUtf8(rq->player_Name).trimmed();
     const QString rawPassword = QString::fromUtf8(rq->player_Password);
     if (!selectPreparedQuery(mysql,
-                             "select u_id, u_password from user where u_name = ?;",
+                             "select u_id, u_password from user_account where u_name = ?;",
                              sqlParams(utf8StdString(rawUserName)),
                              2,
                              liststr)) {
@@ -5701,7 +5780,7 @@ void core::Login_Request(quint64 clientId, STRU_LOGIN_RQ* rq)
 
             if (!isStoredPasswordHashed(storedPassword)) {
                 if (!updatePreparedQuery(mysql,
-                                         "UPDATE user SET u_password = ? WHERE u_id = ?;",
+                                         "UPDATE user_account SET u_password = ? WHERE u_id = ?;",
                                          sqlParams(utf8StdString(hashPasswordForStorage(rawPassword)),
                                                    userId))) {
                     qWarning() << "Failed to upgrade password hash for user" << userId;

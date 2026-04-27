@@ -1,7 +1,7 @@
 #ifndef CMYSQL_H
 #define CMYSQL_H
 
-#include <mysql.h>
+#include <libpq-fe.h>
 #include <list>
 #include <memory>
 #include <string>
@@ -67,7 +67,7 @@ private:
 
 private:
     std::unique_ptr<MySqlConnGuard> m_guard;
-    MYSQL* m_conn = nullptr;
+    PGconn* m_conn = nullptr;
     bool m_inTransaction = false;
     unsigned long long m_lastInsertId = 0;
 };

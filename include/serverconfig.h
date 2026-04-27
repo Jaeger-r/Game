@@ -15,12 +15,12 @@ struct ServerRuntimeConfig
     QString dataDir;
     QString logDir;
 
-    QString mysqlHost = QStringLiteral("127.0.0.1");
-    quint16 mysqlPort = 3306;
-    QString mysqlUser = QStringLiteral("jaeger_server");
-    QString mysqlPassword;
-    QString mysqlDatabase = QStringLiteral("disk");
-    int mysqlPoolSize = 10;
+    QString postgresHost = QStringLiteral("127.0.0.1");
+    quint16 postgresPort = 5432;
+    QString postgresUser = QStringLiteral("jaeger_server");
+    QString postgresPassword;
+    QString postgresDatabase = QStringLiteral("disk");
+    int postgresPoolSize = 10;
 };
 
 ServerRuntimeConfig loadServerRuntimeConfig(int argc,

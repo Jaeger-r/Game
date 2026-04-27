@@ -2,14 +2,15 @@
 #define MYSQLCONNPOOL_H
 #pragma once
 
-#include <mysql.h>
-#include <vector>
-#include <mutex>
+#include <libpq-fe.h>
 #include <condition_variable>
+#include <mutex>
 #include <string>
+#include <vector>
 
 /*
- * 线程安全 MySQL 连接池
+ * 线程安全 PostgreSQL 连接池。
+ * 为了减少业务层改动，暂时保留了原有类型名。
  */
 class MySqlConnPool {
 public:
@@ -22,8 +23,8 @@ public:
               unsigned int port,
               int poolSize);
 
-    MYSQL* acquire();
-    void release(MYSQL* conn);
+    PGconn* acquire();
+    void release(PGconn* conn);
 
     ~MySqlConnPool();
 
@@ -32,9 +33,10 @@ private:
     MySqlConnPool(const MySqlConnPool&) = delete;
     MySqlConnPool& operator=(const MySqlConnPool&) = delete;
 
-    MYSQL* createConnection();
+    PGconn* createConnection();
+    bool isConnectionHealthy(PGconn* conn) const;
 private:
-    std::vector<MYSQL*> m_idle;   // 空闲连接
+    std::vector<PGconn*> m_idle;
     int m_total = 0;
     int m_inUse = 0;
 
@@ -48,7 +50,8 @@ private:
     std::string m_user;
     std::string m_pass;
     std::string m_db;
-    unsigned int m_port = 3306;
+    unsigned int m_port = 5432;
+    int m_targetPoolSize = 0;
 };
 
 /*
@@ -59,10 +62,10 @@ public:
     MySqlConnGuard();
     ~MySqlConnGuard();
 
-    MYSQL* get() { return m_conn; }
+    PGconn* get() { return m_conn; }
 
 private:
-    MYSQL* m_conn = nullptr;
+    PGconn* m_conn = nullptr;
 };
 
 #endif

@@ -14,50 +14,68 @@ MySqlConnPool& MySqlConnPool::Instance() {
     return pool;
 }
 
-/**
- * @brief 创建createConnection相关逻辑
- * @author Jaeger
- * @date 2025.3.28
- */
-MYSQL* MySqlConnPool::createConnection() {
-    MYSQL* conn = mysql_init(nullptr);
+PGconn* MySqlConnPool::createConnection() {
+    const std::string portText = std::to_string(m_port);
+    PGconn* conn = PQsetdbLogin(m_host.c_str(),
+                                portText.c_str(),
+                                nullptr,
+                                nullptr,
+                                m_db.c_str(),
+                                m_user.c_str(),
+                                m_pass.c_str());
     if (!conn) {
-        qWarning() << "mysql_init returned nullptr while creating pooled connection.";
+        qWarning() << "PQsetdbLogin returned nullptr while creating pooled connection.";
         return nullptr;
     }
 
-    if (!mysql_real_connect(conn,
-                            m_host.c_str(),
-                            m_user.c_str(),
-                            m_pass.c_str(),
-                            m_db.c_str(),
-                            m_port, nullptr, 0))
-    {
-        qWarning() << "mysql_real_connect failed for"
+    if (PQstatus(conn) != CONNECTION_OK) {
+        qWarning() << "PostgreSQL connect failed for"
                    << QString::fromStdString(m_host)
                    << QString::fromStdString(m_db)
-                   << ":" << mysql_error(conn);
-        mysql_close(conn);
+                   << ":" << QString::fromLocal8Bit(PQerrorMessage(conn)).trimmed();
+        PQfinish(conn);
         return nullptr;
     }
 
-    const char* charsetCandidates[] = {"utf8mb4", "utf8mb3", "utf8"};
-    bool charsetOk = false;
-    for (const char* charset : charsetCandidates) {
-        if (mysql_set_character_set(conn, charset) == 0) {
-            charsetOk = true;
-            break;
-        }
-    }
-    if (!charsetOk) {
-        qWarning() << "mysql_set_character_set failed for all candidates on"
+    if (PQsetClientEncoding(conn, "UTF8") != 0) {
+        qWarning() << "Failed to set PostgreSQL client encoding to UTF8 for"
                    << QString::fromStdString(m_db)
-                   << ":" << mysql_error(conn);
-        mysql_close(conn);
+                   << ":" << QString::fromLocal8Bit(PQerrorMessage(conn)).trimmed();
+        PQfinish(conn);
         return nullptr;
     }
+
+    PGresult* result = PQexec(conn, "SET application_name = 'Jaeger GameServer';");
+    if (!result || PQresultStatus(result) != PGRES_COMMAND_OK) {
+        qWarning() << "Failed to set PostgreSQL application_name:"
+                   << QString::fromLocal8Bit(PQerrorMessage(conn)).trimmed();
+        if (result) {
+            PQclear(result);
+        }
+        PQfinish(conn);
+        return nullptr;
+    }
+    PQclear(result);
 
     return conn;
+}
+
+bool MySqlConnPool::isConnectionHealthy(PGconn* conn) const
+{
+    if (!conn || PQstatus(conn) != CONNECTION_OK) {
+        return false;
+    }
+
+    PGresult* result = PQexec(conn, "SELECT 1;");
+    if (!result) {
+        return false;
+    }
+
+    const bool ok = PQresultStatus(result) == PGRES_TUPLES_OK
+        && PQntuples(result) == 1
+        && PQnfields(result) == 1;
+    PQclear(result);
+    return ok;
 }
 /* ============ 初始化 ============ */
 
@@ -78,6 +96,7 @@ void MySqlConnPool::init(const std::string& host,
     m_pass = pass;
     m_db   = db;
     m_port = port;
+    m_targetPoolSize = poolSize;
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_inited)
@@ -88,9 +107,9 @@ void MySqlConnPool::init(const std::string& host,
 
     try {
         for (int i = 0; i < poolSize; ++i) {
-            MYSQL* conn = createConnection();
+            PGconn* conn = createConnection();
             if (!conn) {
-                qWarning() << "Failed to create pooled MySQL connection at index" << i;
+                qWarning() << "Failed to create pooled PostgreSQL connection at index" << i;
                 throw std::runtime_error("createConnection failed");
             }
 
@@ -100,7 +119,7 @@ void MySqlConnPool::init(const std::string& host,
     }
     catch (...) {
         for (auto* c : m_idle)
-            mysql_close(c);
+            PQfinish(c);
         m_idle.clear();
         throw;
     }
@@ -115,33 +134,46 @@ void MySqlConnPool::init(const std::string& host,
  * @author Jaeger
  * @date 2025.3.28
  */
-MYSQL* MySqlConnPool::acquire() {
-    // MySQL 要求每个线程初始化
-    mysql_thread_init();
-
+PGconn* MySqlConnPool::acquire() {
     std::unique_lock<std::mutex> lock(m_mutex);
 
     m_cv.wait(lock, [this] {
-        return m_shutdown || !m_idle.empty();
+        return m_shutdown || !m_idle.empty() || m_total < m_targetPoolSize;
     });
 
     if (m_shutdown)
         return nullptr;
 
-    MYSQL* conn = m_idle.back();
+    if (m_idle.empty() && m_total < m_targetPoolSize) {
+        ++m_inUse;
+        ++m_total;
+        lock.unlock();
+
+        PGconn* newConn = createConnection();
+
+        lock.lock();
+        if (!newConn) {
+            --m_inUse;
+            --m_total;
+            m_cv.notify_one();
+            return nullptr;
+        }
+        return newConn;
+    }
+
+    PGconn* conn = m_idle.back();
     m_idle.pop_back();
     ++m_inUse;
 
-    // 检测连接是否存活
-    if (mysql_ping(conn) != 0) {
+    if (!isConnectionHealthy(conn)) {
 
-        mysql_close(conn);
+        PQfinish(conn);
         --m_total;
 
-        // 尝试重建
-        MYSQL* newConn = createConnection();
+        PGconn* newConn = createConnection();
         if (!newConn) {
             --m_inUse;
+            m_cv.notify_one();
             return nullptr;
         }
 
@@ -159,18 +191,22 @@ MYSQL* MySqlConnPool::acquire() {
  * @author Jaeger
  * @date 2025.3.28
  */
-void MySqlConnPool::release(MYSQL* conn) {
+void MySqlConnPool::release(PGconn* conn) {
     if (!conn) return;
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_shutdown) {
-        mysql_close(conn);
+        --m_inUse;
+        PQfinish(conn);
+        m_cv.notify_one();
         return;
     }
-    if (mysql_ping(conn) != 0) {
-        mysql_close(conn);
+    if (!isConnectionHealthy(conn)) {
+        PQfinish(conn);
         --m_total;
+        --m_inUse;
+        m_cv.notify_one();
         return;
     }
 
@@ -196,7 +232,7 @@ MySqlConnPool::~MySqlConnPool() {
     });
 
     for (auto* c : m_idle)
-        mysql_close(c);
+        PQfinish(c);
 
     m_idle.clear();
 }
@@ -220,6 +256,4 @@ MySqlConnGuard::MySqlConnGuard() {
 MySqlConnGuard::~MySqlConnGuard() {
     if (m_conn)
         MySqlConnPool::Instance().release(m_conn);
-
-    mysql_thread_end();   // 线程结束清理
 }

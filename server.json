@@ -7,10 +7,10 @@
     "dataDir": "data",
     "logDir": "logs"
   },
-  "mysql": {
+  "postgres": {
     "host": "127.0.0.1",
-    "port": 3306,
-    "user": "root",
+    "port": 5432,
+    "user": "jaeger_server",
     "database": "disk",
     "poolSize": 10
   }

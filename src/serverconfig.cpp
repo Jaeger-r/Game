@@ -263,18 +263,35 @@ void applyRuntimeOverridesFromMap(ServerRuntimeConfig& config,
         config.logDir = resolvePathFromBase(logDir, baseDir);
     }
 
-    config.mysqlHost =
-        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_HOST"), config.mysqlHost);
-    config.mysqlPort = static_cast<quint16>(
-        qBound(1, envMapIntOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_PORT"), config.mysqlPort), 65535));
-    config.mysqlUser =
-        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_USER"), config.mysqlUser);
-    config.mysqlPassword =
-        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_PASSWORD"), config.mysqlPassword);
-    config.mysqlDatabase =
-        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_DATABASE"), config.mysqlDatabase);
-    config.mysqlPoolSize = qMax(
-        1, envMapIntOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_POOL_SIZE"), config.mysqlPoolSize));
+    config.postgresHost = envMapValueOrDefault(
+        values,
+        QStringLiteral("JAEGER_SERVER_POSTGRES_HOST"),
+        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_HOST"), config.postgresHost));
+    config.postgresPort = static_cast<quint16>(qBound(
+        1,
+        envMapIntOrDefault(
+            values,
+            QStringLiteral("JAEGER_SERVER_POSTGRES_PORT"),
+            envMapIntOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_PORT"), config.postgresPort)),
+        65535));
+    config.postgresUser = envMapValueOrDefault(
+        values,
+        QStringLiteral("JAEGER_SERVER_POSTGRES_USER"),
+        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_USER"), config.postgresUser));
+    config.postgresPassword = envMapValueOrDefault(
+        values,
+        QStringLiteral("JAEGER_SERVER_POSTGRES_PASSWORD"),
+        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_PASSWORD"), config.postgresPassword));
+    config.postgresDatabase = envMapValueOrDefault(
+        values,
+        QStringLiteral("JAEGER_SERVER_POSTGRES_DATABASE"),
+        envMapValueOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_DATABASE"), config.postgresDatabase));
+    config.postgresPoolSize = qMax(
+        1,
+        envMapIntOrDefault(
+            values,
+            QStringLiteral("JAEGER_SERVER_POSTGRES_POOL_SIZE"),
+            envMapIntOrDefault(values, QStringLiteral("JAEGER_SERVER_MYSQL_POOL_SIZE"), config.postgresPoolSize)));
 }
 
 QString resolveConfigPath(int argc, char* argv[])
@@ -346,7 +363,10 @@ ServerRuntimeConfig loadServerRuntimeConfig(int argc,
             if (actualError.error == QJsonParseError::NoError && doc.isObject()) {
                 const QJsonObject root = doc.object();
                 const QJsonObject server = root.value(QStringLiteral("server")).toObject();
-                const QJsonObject mysql = root.value(QStringLiteral("mysql")).toObject();
+                QJsonObject postgres = root.value(QStringLiteral("postgres")).toObject();
+                if (postgres.isEmpty()) {
+                    postgres = root.value(QStringLiteral("mysql")).toObject();
+                }
                 loadedConfigFile = true;
 
                 const QString mode =
@@ -362,14 +382,18 @@ ServerRuntimeConfig loadServerRuntimeConfig(int argc,
                 config.logDir = resolvePathFromBase(
                     valueOrDefault(server, QStringLiteral("logDir"), config.logDir), configBaseDir);
 
-                config.mysqlHost = valueOrDefault(mysql, QStringLiteral("host"), config.mysqlHost);
-                config.mysqlPort = static_cast<quint16>(qBound(
-                    1, intOrDefault(mysql, QStringLiteral("port"), config.mysqlPort), 65535));
-                config.mysqlUser = valueOrDefault(mysql, QStringLiteral("user"), config.mysqlUser);
-                config.mysqlPassword = valueOrDefault(mysql, QStringLiteral("password"), config.mysqlPassword);
-                config.mysqlDatabase = valueOrDefault(mysql, QStringLiteral("database"), config.mysqlDatabase);
-                config.mysqlPoolSize =
-                    qMax(1, intOrDefault(mysql, QStringLiteral("poolSize"), config.mysqlPoolSize));
+                config.postgresHost =
+                    valueOrDefault(postgres, QStringLiteral("host"), config.postgresHost);
+                config.postgresPort = static_cast<quint16>(qBound(
+                    1, intOrDefault(postgres, QStringLiteral("port"), config.postgresPort), 65535));
+                config.postgresUser =
+                    valueOrDefault(postgres, QStringLiteral("user"), config.postgresUser);
+                config.postgresPassword =
+                    valueOrDefault(postgres, QStringLiteral("password"), config.postgresPassword);
+                config.postgresDatabase =
+                    valueOrDefault(postgres, QStringLiteral("database"), config.postgresDatabase);
+                config.postgresPoolSize =
+                    qMax(1, intOrDefault(postgres, QStringLiteral("poolSize"), config.postgresPoolSize));
             } else {
                 appendWarning(warningMessage,
                               QStringLiteral("Failed to parse %1: %2")
@@ -413,6 +437,12 @@ ServerRuntimeConfig loadServerRuntimeConfig(int argc,
         QStringLiteral("JAEGER_SERVER_KCP_PORT"),
         QStringLiteral("JAEGER_SERVER_DATA_DIR"),
         QStringLiteral("JAEGER_SERVER_LOG_DIR"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_HOST"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_PORT"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_USER"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_PASSWORD"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_DATABASE"),
+        QStringLiteral("JAEGER_SERVER_POSTGRES_POOL_SIZE"),
         QStringLiteral("JAEGER_SERVER_MYSQL_HOST"),
         QStringLiteral("JAEGER_SERVER_MYSQL_PORT"),
         QStringLiteral("JAEGER_SERVER_MYSQL_USER"),
@@ -445,10 +475,11 @@ ServerRuntimeConfig loadServerRuntimeConfig(int argc,
         appendWarning(warningMessage,
                       QStringLiteral("No server.json was loaded; using fallback paths and env overrides."));
     }
-    if (!loadedEnvFile && config.mysqlPassword.trimmed().isEmpty()) {
+    if (!loadedEnvFile && config.postgresPassword.trimmed().isEmpty()) {
         appendWarning(
             warningMessage,
-            QStringLiteral("MySQL password is empty. Create GameServer/server.env or set JAEGER_SERVER_MYSQL_PASSWORD."));
+            QStringLiteral(
+                "PostgreSQL password is empty. Create GameServer/server.env or set JAEGER_SERVER_POSTGRES_PASSWORD."));
     }
 
     if (forceHeadless) {

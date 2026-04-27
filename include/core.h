@@ -291,7 +291,7 @@ public:
     bool CheckDB()
     {
         MySqlConnGuard guard;
-        MYSQL* conn = guard.get();
+        PGconn* conn = guard.get();
 
         return conn != nullptr;
     }
@@ -302,6 +302,7 @@ public:
     bool updateHealthInDB(int userId, int newHealth);
     bool updatePlayerInDB(int userId, const Player_Information &attr);
     bool ensureUserCredentialSchema();
+    bool ensureCoreAccountTables();
     bool ensurePlayerStatColumns();
     bool ensureEquipmentColumns();
     bool ensureEquipmentStateTable();

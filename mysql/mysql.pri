@@ -6,26 +6,64 @@ SOURCES += \
     $$PWD/CMySql.cpp \
     $$PWD/mysqlconnpool.cpp
 
-MYSQL_ROOT = $$(MYSQL_ROOT)
+POSTGRES_ROOT = $$(POSTGRES_ROOT)
+POSTGRES_INCLUDE_DIR = $$(POSTGRES_INCLUDE_DIR)
+POSTGRES_LIB_DIR = $$(POSTGRES_LIB_DIR)
+POSTGRES_PG_CONFIG = $$(POSTGRES_PG_CONFIG)
 
-isEmpty(MYSQL_ROOT) {
-    macx: MYSQL_ROOT = /usr/local/mysql-8.0.35-macos13-arm64
+isEmpty(POSTGRES_PG_CONFIG) {
+    macx:exists(/opt/homebrew/opt/libpq/bin/pg_config): POSTGRES_PG_CONFIG = /opt/homebrew/opt/libpq/bin/pg_config
 }
 
-!isEmpty(MYSQL_ROOT) {
-    MYSQL_LIB_DIR = $$MYSQL_ROOT/lib
-    MYSQL_INCLUDE_DIR = $$MYSQL_ROOT/include
-    INCLUDEPATH += $$MYSQL_INCLUDE_DIR
-    LIBS += -L$$MYSQL_LIB_DIR -lmysqlclient
+isEmpty(POSTGRES_PG_CONFIG) {
+    macx:exists(/opt/homebrew/opt/postgresql@17/bin/pg_config): POSTGRES_PG_CONFIG = /opt/homebrew/opt/postgresql@17/bin/pg_config
+}
+
+isEmpty(POSTGRES_ROOT) {
+    macx:exists(/opt/homebrew/opt/libpq): POSTGRES_ROOT = /opt/homebrew/opt/libpq
+}
+
+isEmpty(POSTGRES_ROOT) {
+    macx:exists(/opt/homebrew/opt/postgresql@17): POSTGRES_ROOT = /opt/homebrew/opt/postgresql@17
+}
+
+isEmpty(POSTGRES_INCLUDE_DIR):!isEmpty(POSTGRES_PG_CONFIG) {
+    POSTGRES_INCLUDE_DIR = $$system($$shell_quote($$POSTGRES_PG_CONFIG) --includedir)
+    POSTGRES_INCLUDE_DIR = $$replace(POSTGRES_INCLUDE_DIR, [\\r\\n]+, )
+}
+
+isEmpty(POSTGRES_LIB_DIR):!isEmpty(POSTGRES_PG_CONFIG) {
+    POSTGRES_LIB_DIR = $$system($$shell_quote($$POSTGRES_PG_CONFIG) --libdir)
+    POSTGRES_LIB_DIR = $$replace(POSTGRES_LIB_DIR, [\\r\\n]+, )
+}
+
+isEmpty(POSTGRES_INCLUDE_DIR):!isEmpty(POSTGRES_ROOT) {
+    POSTGRES_INCLUDE_DIR = $$POSTGRES_ROOT/include
+}
+
+POSTGRES_INCLUDE_ALT_DIR =
+!isEmpty(POSTGRES_ROOT) {
+    POSTGRES_INCLUDE_ALT_DIR = $$POSTGRES_ROOT/include/postgresql
+}
+
+isEmpty(POSTGRES_LIB_DIR):!isEmpty(POSTGRES_ROOT) {
+    POSTGRES_LIB_DIR = $$POSTGRES_ROOT/lib
+}
+
+exists($$POSTGRES_INCLUDE_DIR/libpq-fe.h) {
+    INCLUDEPATH += $$POSTGRES_INCLUDE_DIR
+}
+exists($$POSTGRES_INCLUDE_ALT_DIR/libpq-fe.h) {
+    INCLUDEPATH += $$POSTGRES_INCLUDE_ALT_DIR
+}
+
+!isEmpty(POSTGRES_LIB_DIR) {
+    LIBS += -L$$POSTGRES_LIB_DIR -lpq
 
     macx {
-        QMAKE_RPATHDIR += $$MYSQL_LIB_DIR
+        QMAKE_RPATHDIR += $$POSTGRES_LIB_DIR
     }
-}
-
-unix:!macx: isEmpty(MYSQL_ROOT) {
-    exists(/usr/include/mysql/mysql.h) {
-        INCLUDEPATH += /usr/include/mysql
-    }
-    LIBS += -lmysqlclient
+} else:unix {
+    CONFIG += link_pkgconfig
+    PKGCONFIG += libpq
 }
